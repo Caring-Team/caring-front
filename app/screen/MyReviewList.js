@@ -1,0 +1,203 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { getMyReviews } from "../api/review/review.api";
+
+export default function MyReviewList() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState([]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+
+      const response = await getMyReviews({
+        page: 0,
+        size: 50,
+        sort: ["createdAt,desc"],
+      });
+
+      const data = response.data.data || response.data;
+      setReviews(data.content || []);
+    } catch (error) {
+      console.log("MyReviewList fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStars = (count) => (
+    <View style={{ flexDirection: "row", marginTop: 3 }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Ionicons
+          key={i}
+          name="star"
+          size={17}
+          color={i <= count ? "#FFA500" : "#E0E0E0"}
+          style={{ marginRight: 2 }}
+        />
+      ))}
+    </View>
+  );
+
+  return (
+    <View style={styles.root}>
+      <View style={styles.headerArea}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="chevron-back" size={28} color="#162B40" />
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>작성한 리뷰</Text>
+      </View>
+
+      <ScrollView
+        style={styles.contentArea}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        <View style={styles.section}>
+          <View style={styles.titleRow}>
+            <Text style={styles.sectionTitle}>리뷰 내역</Text>
+            <Text style={styles.countText}>{reviews.length}개</Text>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator size="large" color="#5DA7DB" style={{ marginTop: 30 }} />
+          ) : (
+            <View style={{ marginTop: 10 }}>
+              {reviews.map((item) => (
+                <View key={item.id} style={styles.card}>
+                  <Text style={styles.institutionName}>{item.institutionName}</Text>
+                  <Text style={styles.category}>{item.reservationType}</Text>
+
+                  {renderStars(item.rating)}
+
+                  <Text style={styles.content}>{item.content}</Text>
+
+                  <View style={styles.tagWrap}>
+                    {(item.tags || []).map((tag, index) => (
+                      <View key={index} style={styles.tag}>
+                        <Text style={styles.tagText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#F7F9FC",
+  },
+
+  headerArea: {
+    backgroundColor: "#FFFFFF",
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backButton: {
+    marginRight: 5,
+    marginTop: 2,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#162B40",
+  },
+
+  contentArea: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+
+  section: {
+    marginBottom: 26,
+  },
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 10,
+  },
+
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#162B40",
+  },
+  countText: {
+    fontSize: 19,
+    fontWeight: "600",
+    color: "#6B7B8C",
+  },
+
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+
+  institutionName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#162B40",
+  },
+  category: {
+    fontSize: 16,
+    color: "#6B7A99",
+    marginTop: 4,
+  },
+  content: {
+    fontSize: 16,
+    color: "#162B40",
+    marginTop: 10,
+  },
+
+  tagWrap: {
+    flexDirection: "row",
+    marginTop: 14,
+  },
+  tag: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#C8CDD7",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+  },
+  tagText: {
+    fontSize: 15,
+    color: "#162B40",
+    fontWeight: "600",
+  },
+});
