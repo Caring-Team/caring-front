@@ -43,7 +43,7 @@ export default function BottomTabBar({ activeKey }) {
       case "counsel":
         return tabWidth * 3.4;
       case "mypage":
-        return tabWidth * 4.3;
+        return tabWidth * 4.35;
       default:
         return tabWidth * 1.625;
     }
@@ -51,12 +51,10 @@ export default function BottomTabBar({ activeKey }) {
 
   const centerX = getCenterX();
 
-  // 곡선 계산
   const startX = centerX - CURVE_WIDTH / 2;
   const midX = centerX;
   const endX = centerX + CURVE_WIDTH / 2;
 
-  // ⭐ 활성 탭 아이콘 (outline + 파란색)
   const renderCircularIcon = (name) => (
     <View style={styles.circleWrapper}>
       <View style={styles.circle}>
