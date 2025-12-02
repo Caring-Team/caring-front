@@ -41,6 +41,13 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "@react-native-seoul/kakao-login",
+        {
+          "kakaoAppKey": "c2ec577a6ed2f441c5644bb7dcb99323",
+          "kotlinVersion": "1.9.25"
+        }
       ]
     ],
     "experiments": {
@@ -51,7 +58,11 @@
       "router": {},
       "eas": {
         "projectId": "549a41a2-3cdd-4422-8c83-75987434647b"
-      }
+      },
+      "googleClientId": "606487216546-rac7ve9t2uq5vjv71rmenetedgs6end0.apps.googleusercontent.com",
+      "kakaoClientId": "ac5dd963850063e87e99dadf3a96cb68",
+      "naverClientId": "H5l2zITZ1TAaRkQXH2wu",
+      "naverClientSecret": "CmdAO6jS_A"
     }
   }
 }
