@@ -12,13 +12,12 @@ import {
 } from "react-native";
 
 import ProgressBar from "../../components/ProgressBar";
-import api from "../api/axios";
 import { useProgress } from "../context/ProgressContext";
 import { useSignup } from "../context/SignupContext";
 
 export default function PreferredInstitution() {
   const router = useRouter();
-  const { updateSignup, signupData } = useSignup();
+  const { updateSignup } = useSignup();
 
   const { setProgress } = useProgress();
   useEffect(() => {
@@ -27,10 +26,11 @@ export default function PreferredInstitution() {
 
   const [selectedServices, setSelectedServices] = useState([]);
 
-  const TAG_MAP = {
-    "데이케어센터": 16,      
-    "요양원": 18,             
-    "재가 돌봄 서비스": 22,  
+  // 서비스 이름 → API enum 매핑
+  const TYPE_MAP = {
+    "데이케어센터": "DAY_CARE_CENTER",
+    "요양원": "NURSING_HOME",
+    "재가 돌봄 서비스": "HOME_CARE_SERVICE",
   };
 
   const SERVICES = [
@@ -51,37 +51,22 @@ export default function PreferredInstitution() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (selectedServices.length === 0) {
       Alert.alert("선택 필요", "최소 1개 이상의 서비스를 선택해주세요.");
       return;
     }
 
-    const tagIds = selectedServices.map((name) => TAG_MAP[name]);
+    const preferredInstitutionTypes = selectedServices.map((name) => TYPE_MAP[name]);
 
-    try {
-      console.log("요청 보낼 tagIds:", tagIds);
-      console.log("사용할 토큰(accessToken):", signupData.accessToken);
+    console.log("📌 [PreferredInstitution] 선호 기관 선택:", preferredInstitutionTypes);
 
-      await api.put(
-        "/members/me/preference-tags",
-        { tagIds },
-        {
-          headers: {
-            Authorization: `Bearer ${signupData.accessToken}`,
-          },
-        }
-      );
+    // Context에 저장하고 다음 페이지로 이동
+    updateSignup({
+      preferredInstitutionTypes,
+    });
 
-      updateSignup({
-        preferred_institution_tagIds: tagIds,
-      });
-
-      router.push("/screen/PreferenceTags");
-    } catch (err) {
-      console.log("선호 태그 API ERROR:", err.response?.data || err);
-      Alert.alert("오류", "선호기관 설정 중 오류가 발생했습니다.");
-    }
+    router.push("/screen/PreferenceTags");
   };
 
   return (
