@@ -14,8 +14,12 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-
 import { loginOAuth2, loginUser } from "../api/auth/auth.api";
+import {
+  loginWithGoogle,
+  loginWithKakao,
+  loginWithNaver,
+} from "../utils/oauthHelper";
 import { saveTokens } from "../utils/tokenHelper";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -49,11 +53,11 @@ export default function Login() {
         password: password,
       });
 
-      const { access_token, refresh_token } = response.data.data || response.data;
-      
+      const { access_token, refresh_token } =
+        response.data.data || response.data;
+
       if (access_token) {
         await saveTokens(access_token, refresh_token);
-        // 홈 화면으로 이동
         router.replace("/screen/Home");
       } else {
         Alert.alert("로그인 실패", "로그인에 실패했습니다. 다시 시도해주세요.");
@@ -70,52 +74,113 @@ export default function Login() {
     }
   };
 
+  /**
+   * OAuth 소셜 로그인 처리 (새로운 방식)
+   * 1. OAuth Provider에서 Access Token 직접 발급
+   * 2. 백엔드로 Access Token 전송
+   * 3. 백엔드에서 JWT 토큰 발급
+   * 4. 토큰 저장 후 홈으로 이동
+   */
   const handleOAuthLogin = async (provider) => {
     setIsLoading(true);
     try {
-      const state = Math.random().toString(36).substring(7);
-      
-      // 임시: 더미 authorization_code로 로그인 시도
-      // TODO: 실제 OAuth 플로우 구현 필요
-      const dummyAuthorizationCode = `temp_${provider}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-      
-      console.log("Sending OAuth2 login request:", {
-        provider,
-        authorization_code: dummyAuthorizationCode,
-        state: state,
-      });
-      
-      try {
-        // 백엔드에 authorization_code 전달 (POST 요청)
-        const response = await loginOAuth2(provider, {
-          authorization_code: dummyAuthorizationCode,
-          state: state,
-        });
+      console.log(`\n🚀 Starting ${provider} OAuth login...`);
 
-        console.log("OAuth2 login response:", response.data);
+      // 1. OAuth Provider에서 Access Token 가져오기
+      let oauthResult;
+      switch (provider) {
+        case "google":
+          oauthResult = await loginWithGoogle();
+          break;
+        case "kakao":
+          oauthResult = await loginWithKakao();
+          break;
+        case "naver":
+          oauthResult = await loginWithNaver();
+          break;
+        default:
+          throw new Error(`Unsupported provider: ${provider}`);
+      }
 
-        const { access_token, refresh_token } = response.data.data || response.data;
+      const { accessToken, idToken } = oauthResult;
+      console.log(`✅ Got ${provider} access token`);
 
-        if (access_token) {
-          await saveTokens(access_token, refresh_token);
-          router.replace("/screen/Home");
-        } else {
-          // 토큰이 없어도 일단 홈으로 이동 (임시)
-          console.log("No token received, but navigating to home");
-          router.replace("/screen/Home");
-        }
-      } catch (error) {
-        console.log("OAuth login error:", error);
+      // 2. 백엔드로 Access Token 전송
+      const payload = {
+        access_token: accessToken,
+      };
+
+      if (idToken) {
+        payload.id_token = idToken;
+      }
+
+      const response = await loginOAuth2(provider, payload);
+
+      console.log(`✅ Backend response received`);
+      console.log("Full response:", JSON.stringify(response.data, null, 2));
+
+      // 3. 백엔드 응답 확인 - 다양한 응답 구조 대응
+      const responseData = response.data.data || response.data;
+      
+      console.log("Parsed responseData:", JSON.stringify(responseData, null, 2));
+      console.log("Has access_token?", !!responseData.access_token);
+      console.log("Has refresh_token?", !!responseData.refresh_token);
+
+      // 회원가입이 필요한 경우
+      // - access_token만 있고 refresh_token이 없는 경우 (임시 토큰)
+      // - 또는 needsRegistration 플래그가 true인 경우
+      const needsRegistration = !responseData.refresh_token && responseData.access_token;
+      
+      if (needsRegistration) {
+        console.log("⚠️ OAuth 회원가입 필요");
+        console.log("💾 임시 토큰 저장 시작:", responseData.access_token.substring(0, 20) + "...");
+
+        // 임시 토큰 저장 (회원가입 시 사용)
+        await saveTokens(responseData.access_token, null);
         
-        // 에러가 발생해도 일단 홈으로 이동 (임시)
-        // TODO: 실제 OAuth 플로우 구현 후 제거
-        console.log("Error occurred, but navigating to home for testing");
+        console.log("💾 임시 토큰 저장 완료");
+
+        // Alert 대신 바로 페이지 이동 (또는 setTimeout으로 약간의 딜레이 추가)
+        setTimeout(() => {
+          router.push({
+            pathname: "/screen/OAuthSelfIdentification",
+            params: {
+              provider: provider,
+            },
+          });
+        }, 100); // 100ms 딜레이로 토큰 저장 완료 보장
+        
+        return;
+      }
+
+      // 4. 로그인 성공 - JWT 토큰 저장
+      const { access_token, refresh_token } = responseData;
+
+      if (access_token && refresh_token) {
+        await saveTokens(access_token, refresh_token);
+        console.log(`✅ Tokens saved successfully`);
+        Alert.alert("로그인 성공", `${provider} 계정으로 로그인되었습니다.`);
         router.replace("/screen/Home");
+      } else {
+        Alert.alert(
+          "로그인 실패",
+          "토큰을 받지 못했습니다. 다시 시도해주세요."
+        );
       }
     } catch (error) {
-      console.log("OAuth login error:", error);
-      // 에러가 발생해도 일단 홈으로 이동 (임시)
-      router.replace("/screen/Home");
+      console.error(`❌ OAuth ${provider} login error:`, error);
+      console.error(`❌ Error response:`, error.response?.data);
+
+      // 사용자가 취소한 경우
+      if (error.message === "User cancelled the authentication") {
+        return;
+      }
+
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        `${provider} 로그인에 실패했습니다.`;
+      Alert.alert("로그인 실패", errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +191,6 @@ export default function Login() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
-
         <Image
           source={require("../../assets/images/logo.png")}
           style={styles.logo}
@@ -135,10 +199,7 @@ export default function Login() {
 
         <View style={styles.inputContainer}>
           <TextInput
-            style={[
-              styles.input,
-              focusedField === "id" && styles.inputFocused,
-            ]}
+            style={[styles.input, focusedField === "id" && styles.inputFocused]}
             placeholder="아이디"
             placeholderTextColor="#A0AEC0"
             value={id}
@@ -167,7 +228,9 @@ export default function Login() {
         </View>
 
         <View style={styles.linkRow}>
-          <TouchableOpacity onPress={() => router.push("/screen/SelfIdentification")}>
+          <TouchableOpacity
+            onPress={() => router.push("/screen/SelfIdentification")}
+          >
             <Text style={styles.linkText}>회원가입</Text>
           </TouchableOpacity>
           <Text style={styles.separator}>|</Text>
@@ -190,6 +253,7 @@ export default function Login() {
         </TouchableOpacity>
 
         <Text style={styles.snsTitle}>SNS 계정으로 로그인</Text>
+
         <View style={styles.snsRow}>
           <TouchableOpacity
             style={[styles.snsCircle, styles.naver]}
@@ -201,6 +265,7 @@ export default function Login() {
               style={styles.snsIcon}
             />
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.snsCircle, styles.google]}
             onPress={() => handleOAuthLogin("google")}
@@ -211,6 +276,7 @@ export default function Login() {
               style={styles.snsIcon}
             />
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.snsCircle, styles.kakao]}
             onPress={() => handleOAuthLogin("kakao")}
