@@ -12,7 +12,9 @@ import {
 } from "react-native";
 
 import { getMyElderlyProfiles } from "../api/elderly/elderly.api";
-import { getCounselAvailableTimes, getCounselList } from "../api/institution/counsel.api";
+import {
+  getCounselAvailableTimes
+} from "../api/institution/counsel.api";
 import { getInstitutionList } from "../api/institution/profile.api";
 import { createMemberReservation } from "../api/member/reservation.api";
 import { getAccessToken } from "../utils/tokenHelper";
@@ -44,7 +46,8 @@ export default function Reservation() {
   const [loadingCounsels, setLoadingCounsels] = useState(true);
   const [loadingTimes, setLoadingTimes] = useState(false);
 
-  const [currentInstitutionId, setCurrentInstitutionId] = useState(institutionId);
+  const [currentInstitutionId, setCurrentInstitutionId] =
+    useState(institutionId);
 
   useEffect(() => {
     if (institutionId) {
@@ -85,8 +88,15 @@ export default function Reservation() {
   const fetchCounsels = async () => {
     setLoadingCounsels(true);
     try {
-      const response = await getCounselList(currentInstitutionId);
-      const data = response.data?.data || response.data;
+      // const response = await getCounselList(currentInstitutionId);
+      // const data = response.data?.data || response.data;
+
+      if (params.counselServices) {
+        const data = JSON.parse(params.counselServices);
+        setCounsels(data);
+        setLoadingCounsels(false);
+        return;
+      }
 
       let list = [];
       if (Array.isArray(data)) list = data;
@@ -163,14 +173,23 @@ export default function Reservation() {
       const data = response.data?.data || response.data;
       setAvailableTimes(data?.timeSlots || []);
     } catch {
-      Alert.alert("오류", "해당 날짜의 예약 가능한 시간을 가져오지 못했습니다.");
+      Alert.alert(
+        "오류",
+        "해당 날짜의 예약 가능한 시간을 가져오지 못했습니다."
+      );
     } finally {
       setLoadingTimes(false);
     }
   };
 
   const onReserve = async () => {
-    if (!selectedCounsel || !selectedDate || !selectedType || !selectedTime || !selectedElderly) {
+    if (
+      !selectedCounsel ||
+      !selectedDate ||
+      !selectedType ||
+      !selectedTime ||
+      !selectedElderly
+    ) {
       Alert.alert("안내", "모든 항목을 선택해주세요.");
       return;
     }
@@ -216,7 +235,6 @@ export default function Reservation() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-
         <Text style={styles.sectionTitle}>상담 서비스 선택</Text>
 
         {loadingCounsels ? (
@@ -245,7 +263,9 @@ export default function Reservation() {
                     selected && styles.radioOuterSelected,
                   ]}
                 >
-                  {selected && <MaterialIcons name="check" size={18} color="#FFF" />}
+                  {selected && (
+                    <MaterialIcons name="check" size={18} color="#FFF" />
+                  )}
                 </View>
                 <Text style={styles.radioLabel}>{item.title}</Text>
               </TouchableOpacity>
@@ -256,33 +276,38 @@ export default function Reservation() {
         {selectedCounsel && (
           <>
             <Text style={styles.sectionTitle}>예약 희망일</Text>
-
+            <Text style={styles.monthText}>
+              {selectedDate 
+                ? new Date(selectedDate).getMonth() + 1 
+                : new Date().getMonth() + 1}월
+            </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.dateRow}>
                 {dates.map((d) => {
                   const selected = selectedDate === d.date;
                   const isSunday = d.dayName === "일";
-
                   return (
                     <TouchableOpacity
                       key={d.date}
                       onPress={() => handleSelectDate(d.date)}
-                      style={[styles.dateBox, selected && styles.dateBoxSelected]}
+                      style={[
+                        styles.dateBox,
+                        selected && styles.dateBoxSelected,
+                      ]}
                     >
                       <Text
                         style={[
                           styles.weekText,
-                          isSunday && { color: "#FF7F50" },
+                          isSunday && styles.sundayText,
                           selected && styles.weekTextSelected,
                         ]}
                       >
                         {d.dayName}
                       </Text>
-
                       <Text
                         style={[
                           styles.dayText,
-                          isSunday && { color: "#FF7F50" },
+                          isSunday && styles.sundayText,
                           selected && styles.dayTextSelected,
                         ]}
                       >
@@ -296,7 +321,7 @@ export default function Reservation() {
           </>
         )}
 
-        {selectedDate && (
+        {/* {selectedDate && (
           <>
             <Text style={styles.sectionTitle}>예약 방식</Text>
 
@@ -325,7 +350,7 @@ export default function Reservation() {
               );
             })}
           </>
-        )}
+        )} */}
 
         {selectedType && (
           <>
@@ -343,7 +368,10 @@ export default function Reservation() {
                       <TouchableOpacity
                         key={slot.slotIndex}
                         onPress={() => setSelectedTime(slot)}
-                        style={[styles.timeBox, selected && styles.timeSelected]}
+                        style={[
+                          styles.timeBox,
+                          selected && styles.timeSelected,
+                        ]}
                       >
                         <Text
                           style={[
@@ -371,7 +399,10 @@ export default function Reservation() {
                       <TouchableOpacity
                         key={slot.slotIndex}
                         onPress={() => setSelectedTime(slot)}
-                        style={[styles.timeBox, selected && styles.timeSelected]}
+                        style={[
+                          styles.timeBox,
+                          selected && styles.timeSelected,
+                        ]}
                       >
                         <Text
                           style={[
@@ -394,7 +425,9 @@ export default function Reservation() {
             <Text style={styles.sectionTitle}>어르신 선택</Text>
 
             {elderlyProfiles.length === 0 ? (
-              <Text style={styles.emptyText}>등록된 어르신 프로필이 없습니다.</Text>
+              <Text style={styles.emptyText}>
+                등록된 어르신 프로필이 없습니다.
+              </Text>
             ) : (
               elderlyProfiles.map((profile) => {
                 const selected = selectedElderly?.id === profile.id;
@@ -403,7 +436,10 @@ export default function Reservation() {
                   <TouchableOpacity
                     key={profile.id}
                     onPress={() => setSelectedElderly(profile)}
-                    style={[styles.radioBox, selected && styles.radioBoxSelected]}
+                    style={[
+                      styles.radioBox,
+                      selected && styles.radioBoxSelected,
+                    ]}
                   >
                     <View
                       style={[
@@ -465,11 +501,18 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 19,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "600",
     color: "#2C3E50",
     marginTop: 30,
     marginBottom: 10,
+  },
+
+  monthText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#6B7B8C",
+    marginBottom: 8,
   },
 
   emptyText: {
@@ -480,39 +523,46 @@ const styles = StyleSheet.create({
 
   dateRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
   },
 
   dateBox: {
-    width: 50,
-    height: 68,
+    width: 48,
+    height: 80,
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "transparent",
   },
 
   dateBoxSelected: {
-    backgroundColor: "#5DA7DB33",
+    backgroundColor: "rgba(93, 167, 219, 0.1)",
     borderColor: "#5DA7DB",
-    borderWidth: 2,
   },
 
   weekText: {
-    fontSize: 17,
-    color: "#A3A9AE",
-    marginBottom: 10,
+    fontSize: 16,
+    color: "#2C3E50",
+    marginBottom: 16,
   },
+
+  sundayText: {
+    color: "#FF9E6D",
+  },
+
   weekTextSelected: {
     color: "#5DA7DB",
-    fontWeight: "700",
+    fontWeight: "600",
   },
 
   dayText: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#2C3E50",
   },
+
   dayTextSelected: {
     color: "#5DA7DB",
   },
@@ -520,38 +570,42 @@ const styles = StyleSheet.create({
   timeSubtitle: {
     marginTop: 10,
     marginBottom: 10,
-    color: "#7A8793",
-    fontSize: 16,
+    color: "#6B7B8C",
+    fontSize: 15,
+    fontWeight: "600",
   },
 
   timeRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
+    flexWrap: "wrap",
   },
 
   timeBox: {
-    width: 70,
-    height: 40,
+    width: 80,
+    height: 48,
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "transparent",
   },
 
   timeSelected: {
-    backgroundColor: "#5DA7DB33",
+    backgroundColor: "rgba(93, 167, 219, 0.1)",
     borderColor: "#5DA7DB",
-    borderWidth: 2,
   },
 
   timeText: {
-    color: "#36424A",
-    fontSize: 17,
+    color: "#2C3E50",
+    fontSize: 16,
+    fontWeight: "400",
   },
+
   timeTextSelected: {
     color: "#5DA7DB",
-    fontWeight: "700",
-    fontSize: 17,
+    fontWeight: "600",
   },
 
   radioBox: {

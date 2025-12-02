@@ -47,15 +47,26 @@ export default function Institution() {
     const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
 
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<Ionicons key={`full-${i}`} name="star" size={16} color="#FBBF24" />);
+      stars.push(
+        <Ionicons key={`full-${i}`} name="star" size={16} color="#FBBF24" />
+      );
     }
 
     if (hasHalf) {
-      stars.push(<Ionicons key="half" name="star-half" size={16} color="#FBBF24" />);
+      stars.push(
+        <Ionicons key="half" name="star-half" size={16} color="#FBBF24" />
+      );
     }
 
     for (let i = 0; i < emptyStars; i++) {
-      stars.push(<Ionicons key={`empty-${i}`} name="star-outline" size={16} color="#D1D5DB" />);
+      stars.push(
+        <Ionicons
+          key={`empty-${i}`}
+          name="star-outline"
+          size={16}
+          color="#D1D5DB"
+        />
+      );
     }
 
     return stars;
@@ -85,7 +96,12 @@ export default function Institution() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
         <ActivityIndicator size="large" color="#5DA7DB" />
       </View>
     );
@@ -93,8 +109,15 @@ export default function Institution() {
 
   if (!institution) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <Text style={{ color: "#6B7B8C" }}>기관 정보를 불러올 수 없습니다.</Text>
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <Text style={{ color: "#6B7B8C" }}>
+          기관 정보를 불러올 수 없습니다.
+        </Text>
       </View>
     );
   }
@@ -119,7 +142,9 @@ export default function Institution() {
         />
 
         <View style={styles.contentBox}>
-          <Text style={styles.typeText}>{getInstitutionTypeLabel(institution.institutionType)}</Text>
+          <Text style={styles.typeText}>
+            {getInstitutionTypeLabel(institution.institutionType)}
+          </Text>
 
           <Text style={styles.nameText}>{institution.name}</Text>
 
@@ -178,13 +203,20 @@ export default function Institution() {
           <Text style={styles.sectionTitle}>직원 정보</Text>
 
           {institution.careGivers?.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 14 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginTop: 14 }}
+            >
               {institution.careGivers.map((c) => (
                 <View key={c.id} style={styles.caregiverCard}>
                   <View style={styles.caregiverTextArea}>
                     <Text style={styles.caregiverName}>{c.name}</Text>
                     <Text style={styles.caregiverInfo}>
-                      경력 {c.experienceDetails ? `${c.experienceDetails}년` : "정보 없음"}
+                      경력{" "}
+                      {c.experienceDetails
+                        ? `${c.experienceDetails}년`
+                        : "정보 없음"}
                     </Text>
                     <Text style={styles.caregiverInfo}>
                       {c.certificate || "자격증 정보 없음"}
@@ -192,7 +224,10 @@ export default function Institution() {
                   </View>
 
                   {c.photoUrl ? (
-                    <Image source={{ uri: c.photoUrl }} style={styles.caregiverImage} />
+                    <Image
+                      source={{ uri: c.photoUrl }}
+                      style={styles.caregiverImage}
+                    />
                   ) : (
                     <View style={[styles.caregiverImage, styles.noImageBox]}>
                       <Ionicons name="person" size={70} color="#9CA3AF" />
@@ -203,11 +238,15 @@ export default function Institution() {
             </ScrollView>
           ) : (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>등록된 요양보호사가 없습니다.</Text>
+              <Text style={styles.emptyText}>
+                등록된 요양보호사가 없습니다.
+              </Text>
             </View>
           )}
 
-          <Text style={styles.sectionTitle}>모든 리뷰 ({reviews.length}개)</Text>
+          <Text style={styles.sectionTitle}>
+            모든 리뷰 ({reviews.length}개)
+          </Text>
 
           {visibleReviews.map((r) => (
             <View key={r.reviewId} style={styles.reviewCard}>
@@ -235,7 +274,10 @@ export default function Institution() {
           ))}
 
           {!expanded && reviews.length > 2 && (
-            <TouchableOpacity style={styles.moreBtn} onPress={() => setExpanded(true)}>
+            <TouchableOpacity
+              style={styles.moreBtn}
+              onPress={() => setExpanded(true)}
+            >
               <Text style={styles.moreBtnText}>모두보기</Text>
             </TouchableOpacity>
           )}
@@ -245,7 +287,9 @@ export default function Institution() {
               style={styles.actionLeft}
               onPress={async () => {
                 try {
-                  const response = await startChat({ institutionId: parseInt(institutionId) });
+                  const response = await startChat({
+                    institutionId: parseInt(institutionId),
+                  });
 
                   const chatData = response.data.data;
 
@@ -260,7 +304,8 @@ export default function Institution() {
                 } catch (error) {
                   Alert.alert(
                     "오류",
-                    error.response?.data?.message || "상담을 시작하는데 실패했습니다."
+                    error.response?.data?.message ||
+                      "상담을 시작하는데 실패했습니다."
                   );
                 }
               }}
@@ -273,7 +318,11 @@ export default function Institution() {
               onPress={() =>
                 router.push({
                   pathname: "/screen/Reservation",
-                  params: { institutionId, institutionName: institution.name },
+                  params: {
+                    institutionId,
+                    institutionName: institution.name,
+                    counselServices: JSON.stringify(institution.counselServices || []),
+                  },
                 })
               }
             >
@@ -312,7 +361,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     alignItems: "center",
   },
-  
+
   tagBox: {
     backgroundColor: "#F2F7FB",
     paddingHorizontal: 10,
@@ -322,12 +371,12 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 6,
   },
-  
+
   tagText: {
     fontSize: 17,
     color: "#162B40",
   },
-  
+
   noTagText: { fontSize: 14, color: "#9CA3AF" },
 
   sectionCard: {
@@ -336,10 +385,20 @@ const styles = StyleSheet.create({
     padding: 20,
     marginTop: 0,
   },
-  descriptionTitle: { fontSize: 18, fontWeight: "700", color: "#162B40", marginBottom: 8 },
+  descriptionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#162B40",
+    marginBottom: 8,
+  },
   descriptionText: { fontSize: 16, lineHeight: 22, color: "#162B40" },
 
-  sectionTitle: { fontSize: 20, fontWeight: "700", color: "#162B40", marginTop: 32 },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#162B40",
+    marginTop: 32,
+  },
 
   caregiverCard: {
     width: 170,
@@ -351,7 +410,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  caregiverTextArea: { width: "100%", alignItems: "flex-start", marginBottom: 10 },
+  caregiverTextArea: {
+    width: "100%",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
 
   caregiverName: { fontSize: 16, fontWeight: "700", color: "#162B40" },
   caregiverInfo: { fontSize: 13, color: "#5F6F7F", marginTop: 2 },
@@ -423,7 +486,7 @@ const styles = StyleSheet.create({
   reviewTagText: {
     fontSize: 17,
     color: "#162B40",
-  },  
+  },
 
   moreBtn: {
     backgroundColor: "#FFFFFF",

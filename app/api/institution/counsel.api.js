@@ -26,7 +26,7 @@ export const createCounsel = (institutionId, payload) => {
 export const getCounselAvailableTimes = (institutionId, counselId, date) => {
   // institutionId는 사용하지 않지만 호환성을 위해 파라미터 유지
   return apiClient.get(
-    `/public/institutions/${counselId}/details`,
+    `/public/institutions/counsels/${counselId}`,
     {
       params: { date }, // yyyy-MM-dd
     }
