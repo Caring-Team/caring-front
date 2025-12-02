@@ -60,15 +60,19 @@ export default function GuardianInfo() {
       return;
     }
 
+    if (!guardianName) {
+      Alert.alert("오류", "보호자 이름이 누락되었습니다.");
+      return;
+    }
+
+    // Context에 보호자 정보 저장
     updateSignup({
-      gender: form.gender,      
-      address: form.address,     
+      guardianName: guardianName,
+      gender: form.gender,
+      address: form.address,
     });
 
-    router.push({
-      pathname: "/screen/PreferredInstitution",
-      params: { guardianName },
-    });
+    router.push("/screen/PreferredInstitution");
   };
 
   const handleWebViewMessage = (event) => {
