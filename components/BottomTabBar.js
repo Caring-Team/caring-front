@@ -1,157 +1,211 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 
 const { width } = Dimensions.get("window");
 
-// 하단바 전체 높이
 const TAB_HEIGHT = 95;
-
-// 원형 크기
 const CIRCLE_SIZE = 60;
-
-// 패인 부분 너비
 const CURVE_WIDTH = 135;
+const BASE_DEPTH = 40;
+const SOFTEN = 30;
 
-// 패인 깊이
-const CURVE_DEPTH = 40;
-
-// 모서리 부드럽게
-const CURVE_SOFTEN = 30;
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export default function BottomTabBar({ activeKey }) {
   const router = useRouter();
-  const go = (path) => router.push(path);
 
-  const ACTIVE = "#5DA7DB";
-  const INACTIVE = "#C6CEDA";
+  const tabs = ["recommend", "search", "home", "counsel", "mypage"];
 
-  // 탭 총 5개 → 동일한 너비
-  const tabWidth = width / 5;
+  const [internalKey, setInternalKey] = useState(activeKey);
 
-  // 활성 탭 위치 계산
-  const getCenterX = () => {
-    switch (activeKey) {
-      case "recommend":
-        return tabWidth * 0.6;
-      case "search":
-        return tabWidth * 1.625;
-      case "home":
-        return tabWidth * 2.55;
-      case "counsel":
-        return tabWidth * 3.4;
-      case "mypage":
-        return tabWidth * 4.35;
-      default:
-        return tabWidth * 1.625;
-    }
+  const lastPressedKey = useRef(null);
+
+  useEffect(() => {
+    setInternalKey(activeKey);
+  }, [activeKey]);
+
+  const centerX = useSharedValue(getCenter(activeKey));
+  const circleX = useSharedValue(getCenter(activeKey));
+  const circleProgress = useSharedValue(1);
+  const depth = useSharedValue(1);
+
+  const onArrive = () => {
+    router.push(`/screen/${capitalize(internalKey)}`);
   };
 
-  const centerX = getCenterX();
+  useEffect(() => {
+    if (lastPressedKey.current !== internalKey) return;
 
-  const startX = centerX - CURVE_WIDTH / 2;
-  const midX = centerX;
-  const endX = centerX + CURVE_WIDTH / 2;
+    const newCenter = getCenter(internalKey);
 
-  const renderCircularIcon = (name) => (
-    <View style={styles.circleWrapper}>
-      <View style={styles.circle}>
-        <Ionicons name={name + "-outline"} size={32} color={ACTIVE} />
-      </View>
-    </View>
-  );
+    centerX.value = withTiming(newCenter, {
+      duration: 650,
+      easing: Easing.out(Easing.cubic),
+    });
+
+    circleX.value = withTiming(
+      newCenter,
+      { duration: 650, easing: Easing.out(Easing.cubic) },
+      (finished) => {
+        if (finished) {
+          runOnJS(onArrive)();
+        }
+      }
+    );
+
+    circleProgress.value = 0;
+    circleProgress.value = withTiming(1, {
+      duration: 450,
+      easing: Easing.out(Easing.quad),
+    });
+
+    depth.value = 0;
+    depth.value = withTiming(1, {
+      duration: 100,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [internalKey]);
+
+  const flattenedSine = (x) => {
+    "worklet";
+    return Math.sin(x * Math.PI) * (1 - x * 0.5);
+  };
+
+  const animatedProps = useAnimatedProps(() => {
+    const d = depth.value;
+    const curveDepth = BASE_DEPTH * d;
+
+    const startX = centerX.value - CURVE_WIDTH / 2;
+    const midX = centerX.value;
+    const endX = centerX.value + CURVE_WIDTH / 2;
+
+    return {
+      d: `
+        M0 0
+        H${startX}
+        C${startX + SOFTEN} 0, ${midX - SOFTEN} ${curveDepth}, ${midX} ${curveDepth}
+        C${midX + SOFTEN} ${curveDepth}, ${endX - SOFTEN} 0, ${endX} 0
+        H${width}
+        V${TAB_HEIGHT}
+        H0
+        Z
+      `,
+    };
+  });
+
+  const animatedCircleStyle = useAnimatedStyle(() => {
+    let jump = flattenedSine(circleProgress.value) * 35;
+    if (circleProgress.value >= 1) jump = 0;
+
+    return {
+      transform: [
+        { translateX: circleX.value - CIRCLE_SIZE / 2 },
+        { translateY: -30 - jump },
+      ],
+    };
+  });
+
+  const handleTabPress = (key) => {
+    if (key === internalKey) return;
+
+    lastPressedKey.current = key;
+    setInternalKey(key);
+  };
 
   return (
     <View style={styles.wrapper}>
-      {/* 패인된 곡선 */}
       <Svg width={width} height={TAB_HEIGHT} style={styles.svg}>
-        <Path
-          d={`
-            M0 0
-            H${startX}
-            C${startX + CURVE_SOFTEN} 0,
-             ${midX - CURVE_SOFTEN} ${CURVE_DEPTH},
-             ${midX} ${CURVE_DEPTH}
-            C${midX + CURVE_SOFTEN} ${CURVE_DEPTH},
-             ${endX - CURVE_SOFTEN} 0,
-             ${endX} 0
-            H${width}
-            V${TAB_HEIGHT}
-            H0
-            Z
-          `}
-          fill="#FFFFFF"
-        />
+        <AnimatedPath animatedProps={animatedProps} fill="#FFFFFF" />
       </Svg>
 
-      {/* 아이콘 영역 */}
+      <Animated.View style={[styles.circleWrapper, animatedCircleStyle]}>
+        <View style={styles.circle}>
+          <Ionicons name={getIcon(internalKey)} size={32} color="#5DA7DB" />
+        </View>
+      </Animated.View>
+
       <View style={styles.tabContainer}>
-
-        {/* 1. 기관 추천 */}
-        <TouchableOpacity style={styles.tabBtn} onPress={() => go("/screen/Recommend")}>
-          {activeKey === "recommend"
-            ? renderCircularIcon("star")
-            : <Ionicons name="star-outline" size={30} color={INACTIVE} />
-          }
-          <Text style={[styles.label, activeKey === "recommend" && styles.activeLabel,
-            activeKey === "recommend" && { marginTop: 38 }]}>
-            기관 추천
-          </Text>
-        </TouchableOpacity>
-
-        {/* 2. 기관 검색 */}
-        <TouchableOpacity style={styles.tabBtn} onPress={() => go("/screen/Search")}>
-          {activeKey === "search"
-            ? renderCircularIcon("search")
-            : <Ionicons name="search-outline" size={30} color={INACTIVE} />
-          }
-          <Text style={[styles.label, activeKey === "search" && styles.activeLabel,
-            activeKey === "search" && { marginTop: 38 }]}>
-            기관 검색
-          </Text>
-        </TouchableOpacity>
-
-        {/* 3. 홈 */}
-        <TouchableOpacity style={styles.tabBtn} onPress={() => go("/screen/Home")}>
-          {activeKey === "home"
-            ? renderCircularIcon("home")
-            : <Ionicons name="home-outline" size={30} color={INACTIVE} />
-          }
-          <Text style={[styles.label, activeKey === "home" && styles.activeLabel,
-            activeKey === "home" && { marginTop: 38 }]}>
-            홈
-          </Text>
-        </TouchableOpacity>
-
-        {/* 4. 상담 */}
-        <TouchableOpacity style={styles.tabBtn} onPress={() => go("/screen/Counsel")}>
-          {activeKey === "counsel"
-            ? renderCircularIcon("people")
-            : <Ionicons name="people-outline" size={30} color={INACTIVE} />
-          }
-          <Text style={[styles.label, activeKey === "counsel" && styles.activeLabel,
-            activeKey === "counsel" && { marginTop: 38 }]}>
-            상담
-          </Text>
-        </TouchableOpacity>
-
-        {/* 5. 마이페이지 */}
-        <TouchableOpacity style={styles.tabBtn} onPress={() => go("/screen/Mypage")}>
-          {activeKey === "mypage"
-            ? renderCircularIcon("person")
-            : <Ionicons name="person-outline" size={30} color={INACTIVE} />
-          }
-          <Text style={[styles.label, activeKey === "mypage" && styles.activeLabel,
-            activeKey === "mypage" && { marginTop: 38 }]}>
-            마이페이지
-          </Text>
-        </TouchableOpacity>
-
+        {tabs.map((key) => {
+          const isActive = internalKey === key;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={styles.tabBtn}
+              onPress={() => handleTabPress(key)}
+            >
+              <Ionicons
+                name={getIconOutline(key)}
+                size={30}
+                color={isActive ? "transparent" : "#C6CEDA"}
+              />
+              <Text
+                style={[
+                  styles.label,
+                  isActive && styles.activeLabel,
+                  isActive && { marginTop: 20 },
+                ]}
+              >
+                {getLabel(key)}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
+}
+
+function getCenter(key) {
+  const tabWidth = width / 5;
+  switch (key) {
+    case "recommend":
+      return tabWidth * 0.6;
+    case "search":
+      return tabWidth * 1.625;
+    case "home":
+      return tabWidth * 2.55;
+    case "counsel":
+      return tabWidth * 3.4;
+    case "mypage":
+      return tabWidth * 4.35;
+    default:
+      return tabWidth * 1.625;
+  }
+}
+
+function getIcon(key) {
+  if (key === "recommend") return "star-outline";
+  if (key === "search") return "search-outline";
+  if (key === "home") return "home-outline";
+  if (key === "counsel") return "people-outline";
+  if (key === "mypage") return "person-outline";
+}
+
+function getIconOutline(key) {
+  return getIcon(key);
+}
+
+function getLabel(key) {
+  if (key === "recommend") return "기관 추천";
+  if (key === "search") return "기관 검색";
+  if (key === "home") return "홈";
+  if (key === "counsel") return "상담";
+  return "마이페이지";
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 const styles = StyleSheet.create({
@@ -188,12 +242,10 @@ const styles = StyleSheet.create({
     color: "#5DA7DB",
     fontWeight: "600",
   },
-
   circleWrapper: {
     position: "absolute",
-    top: -40,
-    left: "50%",
-    marginLeft: -(CIRCLE_SIZE / 2),
+    bottom: 30,
+    left: 0,
   },
   circle: {
     width: CIRCLE_SIZE,
