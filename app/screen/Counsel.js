@@ -31,9 +31,23 @@ export default function Counsel() {
         size: 50,
         sort: ["lastMessageAt,desc"],
       });
+      console.log("🔍 consult-requests response:", response.data);
 
-      const data = response.data.data || response.data;
-      const consultRequests = data.consultRequests || data.content || [];
+      const raw = response.data?.data ?? response.data ?? {};
+      let consultRequests =
+      raw.consultRequests ??
+      raw.content ??
+      raw.data?.consultRequests ??
+      raw.data?.content ??
+      [];
+      consultRequests = consultRequests.sort(
+        (a, b) =>
+          new Date(b.lastMessageAt || b.createdAt) -
+          new Date(a.lastMessageAt || a.createdAt)
+      );
+  
+      console.log("정렬된 consultRequests:", consultRequests);
+
 
       const formattedList = consultRequests.map((request) => ({
         id: request.id,
@@ -53,7 +67,7 @@ export default function Counsel() {
 
       setChatList(formattedList);
     } catch (error) {
-      console.log("Fetch consult requests error:", error);
+      console.log("❌ Fetch consult requests error:", error.response?.data || error);
       setChatList([]);
     } finally {
       setLoading(false);
@@ -123,24 +137,41 @@ export default function Counsel() {
               >
                 <Image source={{ uri: item.image }} style={styles.thumb} />
 
-                <View style={styles.infoBox}>
-                  <Text style={styles.nameText}>{item.name}</Text>
-                  <Text style={styles.messageText}>{item.lastMessage}</Text>
-                </View>
+<View style={{ flex: 1, marginLeft: 12 }}>
+  
+<View style={{ 
+  flexDirection: "row", 
+  justifyContent: "flex-start", 
+  alignItems: "center" 
+}}>
+  <Text style={styles.nameText}>{item.name}</Text>
 
-                <View style={styles.rightBox}>
-                  <Text style={styles.dateText}>
-                    {getDateLabel(item.lastTime)}
-                  </Text>
+  <Text style={[styles.dateText, { marginLeft: 150 }]}>{getDateLabel(item.lastTime)}</Text>
+</View>
 
-                  {item.unread > 0 ? (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{item.unread}</Text>
-                    </View>
-                  ) : (
-                    <View style={{ height: 22 }} />
-                  )}
-                </View>
+
+<View style={{ 
+  flexDirection: "row",
+  justifyContent: "flex-start",
+  alignItems: "center",
+  marginTop: 4 
+}}>
+  <Text style={[styles.messageText, { flex: 1 }]} numberOfLines={1}>
+    {item.lastMessage}
+  </Text>
+
+  {item.unread > 0 ? (
+    <View style={[styles.badge, { marginLeft: 150 }]}>
+      <Text style={styles.badgeText}>{item.unread}</Text>
+    </View>
+  ) : (
+    <View style={{ width: 22, marginLeft: 150 }} />
+  )}
+</View>
+
+
+</View>
+
               </TouchableOpacity>
             ))
           )}
@@ -215,12 +246,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 16,
     color: "#5F6F7F",
-  },
-
-  rightBox: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 70,
   },
 
   dateText: {

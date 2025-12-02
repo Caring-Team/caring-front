@@ -38,3 +38,8 @@ export const getChatRoomInfoAsMember = (chatRoomId) => {
 export const closeChatAsMember = (chatRoomId) => {
   return apiClient.post(`/members/me/chat/rooms/${chatRoomId}/close`);
 };
+
+
+export const getMyConsultRequests = (params) => {
+  return apiClient.get("/members/me/consult-requests", { params });
+};

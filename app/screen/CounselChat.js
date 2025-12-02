@@ -68,7 +68,9 @@ export default function CounselChat() {
         sort: ["createdAt,asc"],
       });
       
-      const messageData = response.data.data?.messages || [];
+      const messageData = (response.data.data?.messages || []).sort(
+        (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+      );
       setMessages(messageData.map((msg) => ({
         id: msg.id,
         text: msg.content,
@@ -84,6 +86,9 @@ export default function CounselChat() {
       Alert.alert("오류", "메시지를 불러오는데 실패했습니다.");
     } finally {
       setLoading(false);
+      setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: false });
+      }, 30);
     }
   };
 
