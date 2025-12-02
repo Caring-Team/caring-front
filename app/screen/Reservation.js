@@ -317,8 +317,8 @@ if (data.profiles && data.profiles.length > 0) {
   <Text style={styles.sectionTitle}>예약 희망 시간</Text>
 
   <Text style={styles.timeSubtitle}>오전</Text>
-  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-    <View style={styles.timeRow}>
+  <ScrollView showsVerticalScrollIndicator={false}>
+  <View style={styles.timeGrid}>
       {availableTimes
         .filter((t) => t.startTime < "12:00" && t.isAvailable)
         .map((slot) => {
@@ -345,8 +345,8 @@ if (data.profiles && data.profiles.length > 0) {
   </ScrollView>
 
   <Text style={[styles.timeSubtitle, { marginTop: 6 }]}>오후</Text>
-  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-    <View style={styles.timeRow}>
+  <ScrollView showsVerticalScrollIndicator={false}>
+  <View style={styles.timeGrid}>
       {availableTimes
         .filter((t) => t.startTime >= "12:00" && t.isAvailable)
         .map((slot) => {
@@ -456,16 +456,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   timeRow: {
-    flexDirection: "row",
+    flexDirection: "Column",
     gap: 12,
   },
   timeBox: {
-    width: 70,
+    width: (width - 40 - 12 * 3) / 4, 
     height: 40,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  timeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    gap: 12,
   },
   timeSelected: {
     backgroundColor: "#5DA7DB33",
