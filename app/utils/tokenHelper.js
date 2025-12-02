@@ -30,13 +30,21 @@ export const saveRefreshToken = async (token) => {
 
 /**
  * Access Token과 Refresh Token을 함께 저장
+ * refreshToken이 null이면 access token만 저장
  */
 export const saveTokens = async (accessToken, refreshToken) => {
   try {
-    await AsyncStorage.multiSet([
-      [TOKEN_KEYS.ACCESS_TOKEN, accessToken],
-      [TOKEN_KEYS.REFRESH_TOKEN, refreshToken],
-    ]);
+    if (refreshToken) {
+      // refresh token이 있으면 둘 다 저장
+      await AsyncStorage.multiSet([
+        [TOKEN_KEYS.ACCESS_TOKEN, accessToken],
+        [TOKEN_KEYS.REFRESH_TOKEN, refreshToken],
+      ]);
+    } else {
+      // refresh token이 없으면 access token만 저장
+      await AsyncStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
+    }
+    console.log("✅ Tokens saved successfully");
   } catch (e) {
     console.log("saveTokens Error:", e);
   }
