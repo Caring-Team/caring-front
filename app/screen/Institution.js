@@ -326,12 +326,24 @@ export default function Institution() {
 
             <TouchableOpacity
               style={styles.actionRight}
-              onPress={() =>
+              onPress={() => {
+                const hasCounsel = Array.isArray(institution.counselServices)
+                  && institution.counselServices.length > 0;
+              
+                if (!hasCounsel) {
+                  Alert.alert("안내", "이 기관은 예약 가능한 상담 서비스가 없습니다.");
+                  return;
+                }
+              
                 router.push({
                   pathname: "/screen/Reservation",
-                  params: { institutionId, institutionName: institution.name },
-                })
-              }
+                  params: {
+                    institutionId,
+                    institutionName: institution.name,
+                  },
+                });
+              }}
+                         
             >
               <Text style={styles.actionRightText}>예약하기</Text>
             </TouchableOpacity>

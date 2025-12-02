@@ -2,17 +2,9 @@
 import apiClient from "../axios";
 
 // --------------------------------------------------
-// 1. 회원 예약 생성
-//    POST /members/reservations
+// 1. 회원 상담 예약 생성
+//    POST /members/me/reservations
 // --------------------------------------------------
 export const createMemberReservation = (payload) => {
-  // payload = {
-  //   counselId,
-  //   reservationDate, // yyyy-MM-dd
-  //   slotIndex,
-  //   startTime,       // HH:mm
-  //   endTime,         // HH:mm
-  //   elderlyProfileId
-  // }
-  return apiClient.post("/members/reservations", payload);
+  return apiClient.post("/members/me/reservations", payload);
 };
