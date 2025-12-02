@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 
+import { ALL_TAGS } from "../data/allTags";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import BottomTabBar from "../../components/BottomTabBar";
 import regions from "../data/regions.json";
@@ -33,6 +34,7 @@ export default function Search() {
 
   const [searchPopupVisible, setSearchPopupVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [selectedSpecialize, setSelectedSpecialize] = useState([]);
 
   const [price, setPrice] = useState(0);
   const SLIDER_WIDTH = width * 0.9;
@@ -43,47 +45,70 @@ export default function Search() {
 
   const priceResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: (evt, gesture) => {
+        const { locationX } = evt.nativeEvent;
+        const handleX = priceHandleX.current;
+  
+        // 손잡이 주변 ±40px 안에서만 가로슬라이드 시작
+        return Math.abs(locationX - handleX) < 40;
+      },
+  
+      onMoveShouldSetPanResponder: (_, gesture) => {
+        // 슬라이더가 시작되고 나면 세로 스크롤 완전 차단
+        return Math.abs(gesture.dx) > Math.abs(gesture.dy);
+      },
+  
       onPanResponderGrant: () => {
         priceDragStartX.current = priceHandleX.current;
       },
+  
       onPanResponderMove: (_, gesture) => {
         let newX = priceDragStartX.current + gesture.dx;
         if (newX < 0) newX = 0;
         if (newX > SLIDER_WIDTH - HANDLE_RADIUS * 2)
           newX = SLIDER_WIDTH - HANDLE_RADIUS * 2;
-
+  
         priceHandleX.current = newX;
         const ratio = newX / (SLIDER_WIDTH - HANDLE_RADIUS * 2);
         setPrice(Math.round(ratio * 200));
       },
     })
   ).current;
-
+  
   const [nearbyDistance, setNearbyDistance] = useState(0);
   const nearbyHandleX = useRef(0);
   const nearbyDragStartX = useRef(0);
 
   const nearbyResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: (evt, gesture) => {
+        const { locationX } = evt.nativeEvent;
+        const handleX = nearbyHandleX.current;
+  
+        return Math.abs(locationX - handleX) < 40;
+      },
+  
+      onMoveShouldSetPanResponder: (_, gesture) => {
+        return Math.abs(gesture.dx) > Math.abs(gesture.dy);
+      },
+  
       onPanResponderGrant: () => {
         nearbyDragStartX.current = nearbyHandleX.current;
       },
+  
       onPanResponderMove: (_, gesture) => {
         let newX = nearbyDragStartX.current + gesture.dx;
         if (newX < 0) newX = 0;
         if (newX > SLIDER_WIDTH - HANDLE_RADIUS * 2)
           newX = SLIDER_WIDTH - HANDLE_RADIUS * 2;
-
+  
         nearbyHandleX.current = newX;
         const ratio = newX / (SLIDER_WIDTH - HANDLE_RADIUS * 2);
         setNearbyDistance(Math.round(ratio * 20));
       },
     })
   ).current;
+  
 
   const [selectedSido, setSelectedSido] = useState(null);
   const [selectedGugun, setSelectedGugun] = useState(null);
@@ -187,14 +212,13 @@ export default function Search() {
         </TouchableOpacity>
 
         {/* 필터 박스 */}
-        <View
-          style={[
-            styles.filterBox,
-            selectedLocation === "nearby"
-              ? { paddingBottom: 230 }
-              : { paddingBottom: 140 },
-          ]}
+        <ScrollView
+          style={styles.filterScroll}
+          contentContainerStyle={{ paddingBottom: 140 }}
+          showsVerticalScrollIndicator={false}
+         keyboardShouldPersistTaps="handled"
         >
+
           <Text style={styles.filterTitle}>맞춤형 필터</Text>
 
           {/* 유형 */}
@@ -219,6 +243,43 @@ export default function Search() {
                 </Text>
               </TouchableOpacity>
             ))}
+          </View>
+
+          {/* 전문 분야 */}
+          <Text style={styles.subTitle}>전문 분야</Text>
+
+          <View style={styles.specializeContainer}>
+            {Object.keys(ALL_TAGS.SPECIALIZATION).map((name) => {
+              const isSelected = selectedSpecialize.includes(name);
+
+              return (
+                <TouchableOpacity
+                  key={name}
+                  style={[
+                    styles.specializeItem,
+                    isSelected && styles.specializeItemActive,
+                  ]}
+                  onPress={() => {
+                    if (isSelected) {
+                      setSelectedSpecialize(
+                        selectedSpecialize.filter((v) => v !== name)
+                      );
+                    } else {
+                      setSelectedSpecialize([...selectedSpecialize, name]);
+                    }
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.specializeText,
+                      isSelected && styles.specializeTextActive,
+                    ]}
+                  >
+                    {name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           {/* 위치 라디오 */}
@@ -265,9 +326,11 @@ export default function Search() {
               >
                 <View style={styles.nearbyBar} />
                 <View
-                  {...nearbyResponder.panHandlers}
-                  style={[styles.nearbyHandle, { left: nearbyHandleX.current }]}
-                />
+  {...nearbyResponder.panHandlers}
+  style={[styles.nearbyHandle, { left: nearbyHandleX.current }]}
+  hitSlop={{ left: 20, right: 20, top: 20, bottom: 20 }}
+/>
+
               </View>
             </View>
           )}
@@ -357,9 +420,11 @@ export default function Search() {
           <View style={[styles.priceContainer, { width: SLIDER_WIDTH }]}>
             <View style={styles.priceBar} />
             <View
-              {...priceResponder.panHandlers}
-              style={[styles.priceHandle, { left: priceHandleX.current }]}
-            />
+  {...priceResponder.panHandlers}
+  style={[styles.priceHandle, { left: priceHandleX.current }]}
+  hitSlop={{ left: 20, right: 20, top: 20, bottom: 20 }} 
+/>
+
           </View>
 
           <Text style={styles.priceValue}>{price}만원</Text>
@@ -380,16 +445,13 @@ export default function Search() {
           <TouchableOpacity
             style={styles.applyButton}
             onPress={() => {
-              // 필터 조건을 API 파라미터로 변환
               const apiParams = {};
 
-              // 검색어
               if (searchText) {
                 apiParams.keyword = searchText;
                 apiParams.name = searchText;
               }
 
-              // 기관 유형 매핑
               if (selectedType) {
                 if (selectedType === "데이케어센터") {
                   apiParams.institutionType = "DAY_CARE_CENTER";
@@ -400,30 +462,22 @@ export default function Search() {
                 }
               }
 
-              // 지역 검색 - 시/도 선택 시
               if (selectedLocation === "region" && selectedSido) {
                 apiParams.city = selectedSido;
               }
 
-              // 거리 기반 검색
               if (selectedLocation === "nearby" && nearbyDistance > 0) {
                 apiParams.radiusKm = nearbyDistance;
-                // TODO: 실제 위치 정보 가져오기
-                // apiParams.latitude = userLatitude;
-                // apiParams.longitude = userLongitude;
               }
 
-              // 가격 (만원 단위를 원 단위로 변환)
               if (price > 0) {
                 apiParams.maxMonthlyFee = price * 10000;
               }
 
-              // 입소 가능 여부
               if (isAvailable) {
                 apiParams.isAdmissionAvailable = true;
               }
 
-              // 기존 파라미터 유지 (호환성)
               apiParams.selectedType = selectedType || "";
               apiParams.selectedLocation = selectedLocation || "";
               apiParams.selectedSido = selectedSido || "";
@@ -441,7 +495,7 @@ export default function Search() {
           >
             <Text style={styles.applyText}>적용하기</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
 
         <View style={styles.bottomWhiteFix} />
 
@@ -519,7 +573,6 @@ export default function Search() {
                   </TouchableOpacity>
                 </View>
 
-                {/* 최근 검색 */}
                 {recentKeywords.length === 0 ? (
                   <Text style={styles.noRecent}>최근 검색어가 없습니다.</Text>
                 ) : (
@@ -541,7 +594,6 @@ export default function Search() {
                   ))
                 )}
 
-                {/* 닫기 */}
                 <TouchableOpacity
                   style={styles.closePopup}
                   onPress={() => setSearchPopupVisible(false)}
@@ -558,7 +610,6 @@ export default function Search() {
     </TouchableWithoutFeedback>
   );
 }
-
 
 const styles = StyleSheet.create({
 
@@ -964,5 +1015,40 @@ const styles = StyleSheet.create({
     color: "#5DA7DB",
     fontWeight: "600",
   },
+
+  specializeContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 5,
+  },
   
+  specializeItem: {
+    backgroundColor: "#E7EDF2",
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  
+  specializeItemActive: {
+    backgroundColor: "#5DA7DB",
+  },
+  
+  specializeText: {
+    fontSize: 18,
+    color: "#5F6F7F",
+  },
+  
+  specializeTextActive: {
+    color: "#FFFFFF",
+  },
+
+  filterScroll: {
+    flexGrow: 1,
+    backgroundColor: "#F7F9FB",
+    marginTop: 23,
+    paddingHorizontal: 20,
+    paddingTop: 25,
+  },
 });
