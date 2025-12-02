@@ -14,14 +14,15 @@ import {
 } from "react-native";
 
 import ProgressBar from "../../components/ProgressBar";
+import { createElderlyProfile } from "../api/elderly/elderly.api";
 import { useProgress } from "../context/ProgressContext";
 import { useSignup } from "../context/SignupContext";
 
 export default function SeniorHealthInfo() {
   const router = useRouter();
-  const { updateSignup } = useSignup();
-
+  const { updateSignup, signupData } = useSignup(); // signup -> signupData로 수정
   const { setProgress } = useProgress();
+
   useEffect(() => {
     setProgress(1.0);
   }, []);
@@ -39,6 +40,7 @@ export default function SeniorHealthInfo() {
   const [tempCognitive, setTempCognitive] = useState("");
 
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const [modalBlood, setModalBlood] = useState(false);
   const [modalGrade, setModalGrade] = useState(false);
@@ -74,28 +76,146 @@ export default function SeniorHealthInfo() {
     form.cognitive &&
     Object.values(errors).every((e) => !e);
 
-  const handleSubmit = () => {
+  // 변환 함수들
+  const convertGender = (gender) => {
+    if (gender === "남성") return "MALE";
+    if (gender === "여성") return "FEMALE";
+    return "NOT_KNOWN";
+  };
+
+  const convertBloodType = (blood) => {
+    if (blood === "A형") return "A";
+    if (blood === "B형") return "B";
+    if (blood === "O형") return "O";
+    if (blood === "AB형") return "AB";
+    return "UNKNOWN";
+  };
+
+  const convertActivityLevel = (activity) => {
+    if (activity === "높음") return "HIGH";
+    if (activity === "보통") return "MEDIUM";
+    if (activity === "낮음" || activity === "와상") return "LOW";
+    return "MEDIUM";
+  };
+
+  const convertCognitiveLevel = (cognitive) => {
+    if (cognitive === "정상") return "NORMAL";
+    if (cognitive === "경도 인지 장애") return "MILD_COGNITIVE_IMPAIRMENT";
+    if (cognitive === "경증 치매") return "MILD_DEMENTIA";
+    if (cognitive === "중등도 치매") return "MODERATE_DEMENTIA";
+    if (cognitive === "중증 치매") return "SEVERE_DEMENTIA";
+    return "NORMAL";
+  };
+
+  const convertLongTermCareGrade = (grade) => {
+    if (grade === "없음") return "NONE";
+    if (grade === "1등급") return "GRADE_1";
+    if (grade === "2등급") return "GRADE_2";
+    if (grade === "3등급") return "GRADE_3";
+    if (grade === "4등급") return "GRADE_4";
+    if (grade === "5등급") return "GRADE_5";
+    if (grade === "인지등급") return "GRADE_1";
+    return "NONE";
+  };
+
+  const parseAddress = (addressStr) => {
+    if (!addressStr) {
+      return { zipCode: "00000", city: "", street: "" };
+    }
+    const parts = addressStr.split(" ");
+    const city = parts[0] || "";
+    const street = parts.slice(1).join(" ") || "";
+    return {
+      zipCode: "00000",
+      city,
+      street,
+    };
+  };
+
+  const handleSubmit = async () => {
     if (!isFormValid) {
       Alert.alert("입력 오류", "입력값을 다시 확인해주세요.");
       return;
     }
 
-    updateSignup({
-      senior_health: {
-        blood: form.blood,
-        grade: form.grade,
-        activity: form.activity,
-        cognitive: form.cognitive,
-      },
-    });
+    setIsLoading(true);
 
-    router.push("/screen/Welcome");
+    try {
+      // Context에 건강 정보 저장
+      updateSignup({
+        senior_health: {
+          blood: form.blood,
+          grade: form.grade,
+          activity: form.activity,
+          cognitive: form.cognitive,
+        },
+      });
+
+      // 어르신 기본 정보 가져오기 - senior 키로 직접 접근
+      const seniorInfo = signupData?.senior;
+
+      console.log("📌 [SeniorHealthInfo] 어르신 프로필 등록 시작");
+      console.log("📌 signup 전체 데이터:", JSON.stringify(signupData, null, 2));
+      console.log("📌 seniorInfo:", JSON.stringify(seniorInfo, null, 2));
+      console.log("📌 seniorHealth:", JSON.stringify(form, null, 2));
+
+      if (!seniorInfo) {
+        console.log("❌ Senior info missing");
+        Alert.alert("오류", "어르신 기본 정보가 누락되었습니다.");
+        setIsLoading(false);
+        return;
+      }
+
+      const address = parseAddress(seniorInfo.address);
+
+      const payload = {
+        name: seniorInfo.name,
+        gender: convertGender(seniorInfo.gender),
+        birthDate: seniorInfo.birth_date || seniorInfo.birth,
+        bloodType: convertBloodType(form.blood),
+        phoneNumber: seniorInfo.phone?.replace(/-/g, "") || "",
+        activityLevel: convertActivityLevel(form.activity),
+        cognitiveLevel: convertCognitiveLevel(form.cognitive),
+        longTermCareGrade: convertLongTermCareGrade(form.grade),
+        notes: "",
+        address: address,
+      };
+
+      console.log("📤 [SeniorHealthInfo] 어르신 프로필 등록 요청:", JSON.stringify(payload, null, 2));
+
+      const response = await createElderlyProfile(payload);
+      console.log("✅ [SeniorHealthInfo] 어르신 프로필 등록 성공:", response.data);
+
+      Alert.alert("등록 완료", "어르신 프로필이 성공적으로 등록되었습니다!", [
+        {
+          text: "확인",
+          onPress: () => router.push("/screen/Welcome"),
+        },
+      ]);
+    } catch (error) {
+      console.error("❌ [SeniorHealthInfo] 어르신 프로필 등록 실패:", error);
+      console.error("❌ Error response:", error.response?.data);
+      console.error("❌ Error status:", error.response?.status);
+      console.error("❌ Error message:", error.message);
+
+      Alert.alert(
+        "어르신 프로필 등록 실패",
+        error.response?.data?.message || error.message || "프로필 등록에 실패했습니다.",
+        [
+          {
+            text: "다시 시도",
+            style: "cancel",
+          },
+        ]
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
-        
         <View style={styles.progressContainer}>
           <ProgressBar />
         </View>
@@ -115,7 +235,6 @@ export default function SeniorHealthInfo() {
         </View>
 
         <View style={styles.form}>
-
           {/* 혈액형 */}
           <View style={{ marginBottom: 12 }}>
             <Text style={styles.label}>혈액형</Text>
@@ -170,7 +289,6 @@ export default function SeniorHealthInfo() {
           {form.blood && form.grade && (
             <View style={{ marginBottom: 12 }}>
               <Text style={styles.label}>활동 레벨</Text>
-
               <TouchableOpacity
                 style={[
                   styles.inputBox,
@@ -225,19 +343,21 @@ export default function SeniorHealthInfo() {
         <TouchableOpacity
           style={[
             styles.button,
-            { backgroundColor: isFormValid ? "#5DA7DB" : "#D7E5F0" },
+            { backgroundColor: isFormValid && !isLoading ? "#5DA7DB" : "#D7E5F0" },
           ]}
           onPress={handleSubmit}
-          disabled={!isFormValid}
+          disabled={!isFormValid || isLoading}
         >
-          <Text style={styles.buttonText}>회원가입 완료</Text>
+          <Text style={styles.buttonText}>
+            {isLoading ? "등록 중..." : "회원가입 완료"}
+          </Text>
         </TouchableOpacity>
 
+        {/* 혈액형 모달 */}
         <Modal transparent visible={modalBlood} animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.pickerContainer}>
               <Text style={styles.pickerTitle}>혈액형 선택</Text>
-
               <Picker
                 selectedValue={tempBlood}
                 onValueChange={(v) => setTempBlood(v)}
@@ -248,7 +368,6 @@ export default function SeniorHealthInfo() {
                 <Picker.Item label="O형" value="O형" />
                 <Picker.Item label="AB형" value="AB형" />
               </Picker>
-
               <TouchableOpacity
                 style={styles.pickerConfirm}
                 onPress={() => {
@@ -262,11 +381,11 @@ export default function SeniorHealthInfo() {
           </View>
         </Modal>
 
+        {/* 요양등급 모달 */}
         <Modal transparent visible={modalGrade} animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.pickerContainer}>
               <Text style={styles.pickerTitle}>요양 등급 선택</Text>
-
               <Picker
                 selectedValue={tempGrade}
                 onValueChange={(v) => setTempGrade(v)}
@@ -280,7 +399,6 @@ export default function SeniorHealthInfo() {
                 <Picker.Item label="5등급" value="5등급" />
                 <Picker.Item label="인지등급" value="인지등급" />
               </Picker>
-
               <TouchableOpacity
                 style={styles.pickerConfirm}
                 onPress={() => {
@@ -294,11 +412,11 @@ export default function SeniorHealthInfo() {
           </View>
         </Modal>
 
+        {/* 활동 레벨 모달 */}
         <Modal transparent visible={modalActivity} animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.pickerContainer}>
               <Text style={styles.pickerTitle}>활동 레벨 선택</Text>
-
               <Picker
                 selectedValue={tempActivity}
                 onValueChange={(v) => setTempActivity(v)}
@@ -309,7 +427,6 @@ export default function SeniorHealthInfo() {
                 <Picker.Item label="낮음 (상당한 도움이 필요)" value="낮음" />
                 <Picker.Item label="와상 (침대에서만 생활)" value="와상" />
               </Picker>
-
               <TouchableOpacity
                 style={styles.pickerConfirm}
                 onPress={() => {
@@ -323,11 +440,11 @@ export default function SeniorHealthInfo() {
           </View>
         </Modal>
 
+        {/* 인지 수준 모달 */}
         <Modal transparent visible={modalCognitive} animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.pickerContainer}>
               <Text style={styles.pickerTitle}>인지 수준 선택</Text>
-
               <Picker
                 selectedValue={tempCognitive}
                 onValueChange={(v) => setTempCognitive(v)}
@@ -351,7 +468,6 @@ export default function SeniorHealthInfo() {
                   value="중증 치매"
                 />
               </Picker>
-
               <TouchableOpacity
                 style={styles.pickerConfirm}
                 onPress={() => {
@@ -364,7 +480,6 @@ export default function SeniorHealthInfo() {
             </View>
           </View>
         </Modal>
-
       </View>
     </TouchableWithoutFeedback>
   );
