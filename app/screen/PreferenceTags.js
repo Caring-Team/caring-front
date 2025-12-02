@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import ProgressBar from "../../components/ProgressBar";
@@ -54,15 +54,12 @@ export default function PreferenceTags() {
     }
 
     try {
-      await api.put(
-        "/members/me/preference-tags",
-        { tagIds: selectedTags },
-        {
-          headers: {
-            Authorization: `Bearer ${signupData.accessToken}`,
-          },
-        }
-      );
+      console.log("📤 [PreferenceTags] 선호 태그 등록:", selectedTags);
+      
+      // interceptor가 자동으로 토큰을 헤더에 추가하므로 별도로 헤더 설정 불필요
+      const response = await api.put("/members/me/preference-tags", { tagIds: selectedTags });
+      
+      console.log("✅ [PreferenceTags] 선호 태그 등록 성공:", response.data);
 
       updateSignup({
         preference_tags: selectedTags,
@@ -70,8 +67,11 @@ export default function PreferenceTags() {
 
       router.push("/screen/SeniorInfo");
     } catch (err) {
-      console.log("선호 태그 API ERROR:", err.response?.data || err);
-      Alert.alert("오류", "선호 태그 설정 중 오류가 발생했습니다.");
+      console.error("❌ [PreferenceTags] 선호 태그 등록 실패:", err.response?.data || err);
+      Alert.alert(
+        "선호 태그 등록 실패",
+        err.response?.data?.message || "선호 태그 설정 중 오류가 발생했습니다."
+      );
     }
   };
 
