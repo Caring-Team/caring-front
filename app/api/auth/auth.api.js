@@ -71,16 +71,17 @@ export const loginUser = (payload) => {
 /* -----------------------------------------------
  * 9. OAuth2 용 개인 인증 코드 발송
  *    POST /auth/oauth2/certification-code
+ *    Header: Authorization 자동 추가 (interceptor)
  * ----------------------------------------------- */
 export const sendOAuth2CertificationCode = (payload) => {
   return apiClient.post("/auth/oauth2/certification-code", payload);
 };
 
 /* -----------------------------------------------
- * 10. OAuth2 로그인
+ * 10. OAuth2 로그인 (Access Token 방식)
  *     POST /auth/oauth2/login/{provider}
  *     provider는 경로 파라미터로 전달
- *     Request body: { authorization_code, state }
+ *     Request body: { access_token }
  * ----------------------------------------------- */
 export const loginOAuth2 = (provider, payload) => {
   return apiClient.post(`/auth/oauth2/login/${provider}`, payload);
@@ -89,15 +90,16 @@ export const loginOAuth2 = (provider, payload) => {
 /* -----------------------------------------------
  * 11. OAuth2 회원 등록(추가 정보 입력)
  *     POST /auth/oauth2/register
+ *     Header: Authorization 자동 추가 (interceptor)
  * ----------------------------------------------- */
 export const registerOAuth2User = (payload) => {
-  // payload = { gender, address: { city, street, zipCode } }
   return apiClient.post("/auth/oauth2/register", payload);
 };
 
 /* -----------------------------------------------
  * 12. OAuth2 전화번호 인증 + 코드 검증
  *     POST /auth/oauth2/verify-phone
+ *     Header: Authorization 자동 추가 (interceptor)
  * ----------------------------------------------- */
 export const verifyOAuth2Phone = (payload) => {
   return apiClient.post("/auth/oauth2/verify-phone", payload);
