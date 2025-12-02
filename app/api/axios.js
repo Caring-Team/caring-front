@@ -44,7 +44,6 @@ api.interceptors.request.use(
     console.log(`   URL: ${url}`);
     if (params) console.log(`   Params: ${params}`);
     if (data) console.log(`   Data: ${data}...`);
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     const noAuthNeeded = [
       "/auth/register",
@@ -52,11 +51,8 @@ api.interceptors.request.use(
       "/auth/certification-code",
       "/auth/verify-phone",
       "/auth/token/refresh",
-      "/auth/oauth2/login",
+      "/auth/oauth2/login", // OAuth 로그인 시에만 토큰 불필요
       "/auth/oauth2/authorize",
-      "/auth/oauth2/certification-code",
-      "/auth/oauth2/register",
-      "/auth/oauth2/verify-phone",
       "/auth/institution/certification-code",
       "/auth/institution/login",
       "/auth/institution/register",
@@ -66,18 +62,26 @@ api.interceptors.request.use(
     ];
 
     if (noAuthNeeded.some((path) => config.url.includes(path))) {
+      console.log(`   🔓 No Auth Required for: ${config.url}`);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       return config;
     }
 
     try {
       const token = await getAccessToken();
+      console.log(`   🔑 Token Retrieved:`, token ? token.substring(0, 20) + "..." : "null");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log(`   ✅ Authorization Header Added`);
+      } else {
+        console.log(`   ⚠️ No Token Found - Request will fail if auth required`);
       }
     } catch (e) {
+      console.log(`   ❌ Token Retrieval Error:`, e.message);
       return config;
     }
 
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     return config;
   },
   (error) => {
