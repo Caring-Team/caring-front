@@ -11,6 +11,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Linking,
 } from "react-native";
 
 import BottomTabBar from "../../components/BottomTabBar";
@@ -49,15 +50,12 @@ export default function Institution() {
     for (let i = 0; i < fullStars; i++) {
       stars.push(<Ionicons key={`full-${i}`} name="star" size={16} color="#FBBF24" />);
     }
-
     if (hasHalf) {
       stars.push(<Ionicons key="half" name="star-half" size={16} color="#FBBF24" />);
     }
-
     for (let i = 0; i < emptyStars; i++) {
       stars.push(<Ionicons key={`empty-${i}`} name="star-outline" size={16} color="#D1D5DB" />);
     }
-
     return stars;
   };
 
@@ -68,7 +66,6 @@ export default function Institution() {
           setLoading(false);
           return;
         }
-
         const detailResponse = await getInstitutionDetail(institutionId);
         const detailData = detailResponse.data.data;
         setInstitution(detailData);
@@ -79,7 +76,6 @@ export default function Institution() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [institutionId]);
 
@@ -100,9 +96,10 @@ export default function Institution() {
   }
 
   const visibleReviews = Array.isArray(reviews)
-  ? (expanded ? reviews : reviews.slice(0, 2))
-  : [];
-
+    ? expanded
+      ? reviews
+      : reviews.slice(0, 2)
+    : [];
 
   return (
     <View style={styles.container}>
@@ -123,7 +120,6 @@ export default function Institution() {
 
         <View style={styles.contentBox}>
           <Text style={styles.typeText}>{getInstitutionTypeLabel(institution.institutionType)}</Text>
-
           <Text style={styles.nameText}>{institution.name}</Text>
 
           <View style={styles.row}>
@@ -158,21 +154,20 @@ export default function Institution() {
               ))}
 
             {Array.isArray(institution.specializedConditions) &&
-              institution.specializedConditions.map((t, index) => (
-                <View key={`cond-${index}`} style={styles.tagBox}>
+              institution.specializedConditions.map((t, idx) => (
+                <View key={`cond-${idx}`} style={styles.tagBox}>
                   <Text style={styles.tagText}>{String(t ?? "")}</Text>
                 </View>
               ))}
 
-            {(!institution.tags || institution.tags.length === 0) &&
-              (!institution.specializedConditions ||
-                institution.specializedConditions.length === 0) && (
+            {!institution.tags?.length &&
+              !institution.specializedConditions?.length && (
                 <Text style={styles.noTagText}>등록된 태그가 없습니다.</Text>
               )}
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={[styles.descriptionTitle]}>기관 설명</Text>
+            <Text style={styles.descriptionTitle}>기관 설명</Text>
             <Text style={styles.descriptionText}>
               {institution.description || "등록된 기관 설명이 없습니다."}
             </Text>
@@ -213,37 +208,34 @@ export default function Institution() {
           <Text style={styles.sectionTitle}>모든 리뷰 ({reviews.length}개)</Text>
 
           {visibleReviews.length > 0 ? (
-  visibleReviews.map((r, idx) => (
-    <View key={r.reviewId || `review-${idx}`} style={styles.reviewCard}>
-      <View style={styles.reviewHeader}>
-        <View style={styles.leftReviewHeader}>
-          <Text style={styles.reviewName}>{r.memberName}</Text>
-          <View style={styles.starRow}>{renderStars(r.rating)}</View>
-        </View>
+            visibleReviews.map((r, idx) => (
+              <View key={r.reviewId || `review-${idx}`} style={styles.reviewCard}>
+                <View style={styles.reviewHeader}>
+                  <View style={styles.leftReviewHeader}>
+                    <Text style={styles.reviewName}>{r.memberName}</Text>
+                    <View style={styles.starRow}>{renderStars(r.rating)}</View>
+                  </View>
+                  {r.counselName ? (
+                    <Text style={styles.counselNameTag}>{r.counselName}</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.reviewContent}>{r.content}</Text>
 
-        {r.counselName ? (
-          <Text style={styles.counselNameTag}>{r.counselName}</Text>
-        ) : null}
-      </View>
-
-      <Text style={styles.reviewContent}>{r.content}</Text>
-
-      <View style={styles.reviewTagRow}>
-        {Array.isArray(r.tags) &&
-          r.tags.map((t, tagIdx) => (
-            <View key={`${t}-${tagIdx}`} style={styles.reviewTagBox}>
-              <Text style={styles.reviewTagText}>{t}</Text>
+                <View style={styles.reviewTagRow}>
+                  {Array.isArray(r.tags) &&
+                    r.tags.map((t, tagIdx) => (
+                      <View key={`${t}-${tagIdx}`} style={styles.reviewTagBox}>
+                        <Text style={styles.reviewTagText}>{t}</Text>
+                      </View>
+                    ))}
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>등록된 리뷰가 없습니다.</Text>
             </View>
-          ))}
-      </View>
-    </View>
-  ))
-) : (
-  <View style={styles.emptyCard}>
-    <Text style={styles.emptyText}>등록된 리뷰가 없습니다.</Text>
-  </View>
-)}
-
+          )}
 
           {!expanded && reviews.length > 2 && (
             <TouchableOpacity style={styles.moreBtn} onPress={() => setExpanded(true)}>
@@ -251,90 +243,100 @@ export default function Institution() {
             </TouchableOpacity>
           )}
 
+          {/* 🔥 하단 3버튼 */}
           <View style={styles.actionRow}>
-          <TouchableOpacity
-  style={styles.actionLeft}
-  onPress={async () => {
-    try {
-      const counselId = institution?.counselServices?.[0]?.id;
-    
-      if (!counselId) {
-        Alert.alert("오류", "상담 서비스가 존재하지 않습니다.");
-        return;
-      }
-    
-      const response = await startChat({
-        institutionId: Number(institutionId),
-        counselId: counselId,
-      });
+            <TouchableOpacity
+              style={styles.actionLeft}
+              onPress={async () => {
+                try {
+                  const counselId = institution?.counselServices?.[0]?.id;
+                  if (!counselId) {
+                    Alert.alert("오류", "상담 서비스가 존재하지 않습니다.");
+                    return;
+                  }
 
-      const chatData = response.data.data;
-    
-      router.push({
-        pathname: "/screen/CounselChat",
-        params: {
-          id: chatData.chatRoomId,
-          name: institution.name,
-          chatRoomId: chatData.chatRoomId,
-        },
-      });
-    
-    } catch (error) {
-    
-      if (error.response?.data?.code === "CHAT-005") {
-        const list = await getMyConsultRequests({
-          page: 0,
-          size: 50,
-          sort: ["lastMessageAt,desc"],
-        });
-      
-        const consultRequests = list.data.data.consultRequests || [];
-      
-        const existing = consultRequests.find(
-          (r) => r.institution?.id === Number(institutionId) && r.status === "ACTIVE"
-        );
-      
-        if (existing) {
-          router.push({
-            pathname: "/screen/CounselChat",
-            params: {
-              id: existing.chatRoomId,
-              name: institution.name,
-              chatRoomId: existing.chatRoomId,
-            },
-          });
-          return;
-        }
-      
-        Alert.alert("안내", "진행 중인 상담방을 찾을 수 없습니다.");
-        return;
-      }
-      
-    
-      Alert.alert(
-        "오류",
-        error.response?.data?.message || "상담을 시작하는데 실패했습니다."
-      );
-    }
-    
-  }}
-  
->
-  <Text style={styles.actionLeftText}>상담하기</Text>
-</TouchableOpacity>
+                  const response = await startChat({
+                    institutionId: Number(institutionId),
+                    counselId: counselId,
+                  });
 
+                  const chatData = response.data.data;
+
+                  router.push({
+                    pathname: "/screen/CounselChat",
+                    params: {
+                      id: chatData.chatRoomId,
+                      name: institution.name,
+                      chatRoomId: chatData.chatRoomId,
+                    },
+                  });
+                } catch (error) {
+                  if (error.response?.data?.code === "CHAT-005") {
+                    const list = await getMyConsultRequests({
+                      page: 0,
+                      size: 50,
+                      sort: ["lastMessageAt,desc"],
+                    });
+
+                    const consultRequests = list.data.data.consultRequests || [];
+
+                    const existing = consultRequests.find(
+                      (r) =>
+                        r.institution?.id === Number(institutionId) &&
+                        r.status === "ACTIVE"
+                    );
+
+                    if (existing) {
+                      router.push({
+                        pathname: "/screen/CounselChat",
+                        params: {
+                          id: existing.chatRoomId,
+                          name: institution.name,
+                          chatRoomId: existing.chatRoomId,
+                        },
+                      });
+                      return;
+                    }
+
+                    Alert.alert("안내", "진행 중인 상담방을 찾을 수 없습니다.");
+                    return;
+                  }
+
+                  Alert.alert(
+                    "오류",
+                    error.response?.data?.message || "상담을 시작하는데 실패했습니다."
+                  );
+                }
+              }}
+            >
+              <Text style={styles.actionLeftText}>상담하기</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.callButton}
+              onPress={() => {
+                if (!institution.phoneNumber) {
+                  Alert.alert("안내", "등록된 전화번호가 없습니다.");
+                  return;
+                }
+                Linking.openURL(`tel:${institution.phoneNumber}`);
+              }}
+            >
+              <Text style={styles.callButtonText}>전화하기</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.actionRight}
               onPress={() => {
-                const hasCounsel = Array.isArray(institution.counselServices)
-                  && institution.counselServices.length > 0;
-              
+                const hasCounsel =
+                  Array.isArray(institution.counselServices) &&
+                  institution.counselServices.length > 0;
+
                 if (!hasCounsel) {
                   Alert.alert("안내", "이 기관은 예약 가능한 상담 서비스가 없습니다.");
                   return;
                 }
-              
+
                 router.push({
                   pathname: "/screen/Reservation",
                   params: {
@@ -343,7 +345,6 @@ export default function Institution() {
                   },
                 });
               }}
-                         
             >
               <Text style={styles.actionRightText}>예약하기</Text>
             </TouchableOpacity>
@@ -374,15 +375,14 @@ const styles = StyleSheet.create({
 
   tagRowFixed: {
     marginTop: 14,
-    paddingVertical: 0,
     minHeight: 40,
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
   },
-  
+
   tagBox: {
-    backgroundColor: "#F2F7FB",
+    backgroundColor: "#E7EDF2",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -390,20 +390,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 6,
   },
-  
+
   tagText: {
-    fontSize: 17,
-    color: "#162B40",
+    fontSize: 15,
+    color: "#5F6F7F",
   },
-  
+
   noTagText: { fontSize: 14, color: "#9CA3AF" },
 
   sectionCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 20,
-    marginTop: 0,
   },
+
   descriptionTitle: { fontSize: 18, fontWeight: "700", color: "#162B40", marginBottom: 8 },
   descriptionText: { fontSize: 16, lineHeight: 22, color: "#162B40" },
 
@@ -440,6 +440,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 12,
   },
+
+  emptyCard: {
+    padding: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    marginTop: 10,
+    alignItems: "center",
+  },
+
+  emptyText: { fontSize: 15, color: "#6B7B8C" },
 
   reviewCard: {
     backgroundColor: "#FFFFFF",
@@ -480,7 +490,7 @@ const styles = StyleSheet.create({
   reviewTagRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
 
   reviewTagBox: {
-    backgroundColor: "#F2F7FB",
+    backgroundColor: "#E7EDF2",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -488,10 +498,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 6,
   },
-  reviewTagText: {
-    fontSize: 17,
-    color: "#162B40",
-  },  
+
+  reviewTagText: { fontSize: 15, color: "#5F6F7F" },
 
   moreBtn: {
     backgroundColor: "#FFFFFF",
@@ -501,9 +509,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 26,
     borderRadius: 10,
   },
+
   moreBtnText: { fontSize: 16, color: "#5DA7DB" },
 
-  actionRow: { flexDirection: "row", marginTop: 30, marginBottom: 20 },
+  actionRow: {
+    flexDirection: "row",
+    marginTop: 30,
+    marginBottom: 20,
+    gap: 10,
+  },
 
   actionLeft: {
     flex: 1,
@@ -511,9 +525,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
-    marginRight: 10,
   },
+
   actionLeftText: { fontSize: 18, fontWeight: "700", color: "#5DA7DB" },
+
+  callButton: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#5DA7DB",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+
+  callButtonText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#5DA7DB",
+  },
 
   actionRight: {
     flex: 1,
@@ -521,7 +551,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
-    marginLeft: 10,
   },
+
   actionRightText: { fontSize: 18, fontWeight: "700", color: "#FFFFFF" },
 });
