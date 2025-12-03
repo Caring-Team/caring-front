@@ -3,15 +3,15 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
 
-import { getMyReviews, deleteReview } from "../api/review/review.api";
+import { deleteReview, getMyReviews } from "../api/review/review.api";
 
 export default function MyReviewList() {
   const router = useRouter();
@@ -109,7 +109,7 @@ export default function MyReviewList() {
                   key={item.id}
                   style={styles.card}
                   activeOpacity={0.85}
-                  onPress={() => router.push(`/screen/ReviewDetail?id=${item.id}`)}
+                  onPress={null}
                 >
                   <View style={styles.cardHeader}>
                     <Text style={styles.institutionName}>{item.institutionName}</Text>
@@ -131,7 +131,7 @@ export default function MyReviewList() {
                         style={styles.menuButton}
                         onPress={() => {
                           setMenuOpenId(null);
-                          router.push(`/screen/EditReview?id=${item.id}`);
+                          router.push(`/screen/MyReview?id=${item.id}`);
                         }}
                       >
                         <Text style={styles.menuText}>수정하기</Text>
