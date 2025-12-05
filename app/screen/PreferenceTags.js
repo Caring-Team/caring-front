@@ -56,6 +56,11 @@ export default function PreferenceTags() {
     try {
       console.log("📤 [PreferenceTags] 선호 태그 등록:", selectedTags);
       
+      // 토큰 확인
+      const { getAccessToken } = require("../utils/tokenHelper");
+      const token = await getAccessToken();
+      console.log("🔑 [PreferenceTags] 현재 저장된 토큰:", token ? token.substring(0, 30) + "..." : "❌ 토큰 없음");
+      
       // interceptor가 자동으로 토큰을 헤더에 추가하므로 별도로 헤더 설정 불필요
       const response = await api.put("/members/me/preference-tags", { tagIds: selectedTags });
       
@@ -68,6 +73,7 @@ export default function PreferenceTags() {
       router.push("/screen/SeniorInfo");
     } catch (err) {
       console.error("❌ [PreferenceTags] 선호 태그 등록 실패:", err.response?.data || err);
+      console.error("❌ [PreferenceTags] 에러 상태:", err.response?.status);
       Alert.alert(
         "선호 태그 등록 실패",
         err.response?.data?.message || "선호 태그 설정 중 오류가 발생했습니다."

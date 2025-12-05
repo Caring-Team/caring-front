@@ -15,6 +15,7 @@ import {
 import { sendCertificationCode } from "../api/auth/auth.api";
 import { signupStore, useSignup } from "../context/SignupContext";
 
+
 export default function SelfIdentification() {
   const router = useRouter();
   const { updateSignup } = useSignup();

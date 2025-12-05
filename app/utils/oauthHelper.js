@@ -1,122 +1,106 @@
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import {
-    login as kakaoLogin
+  login as kakaoLogin
 } from "@react-native-seoul/kakao-login";
-import * as AuthSession from "expo-auth-session";
+import NaverLogin from '@react-native-seoul/naver-login';
 import Constants from "expo-constants";
-import * as WebBrowser from "expo-web-browser";
 
-WebBrowser.maybeCompleteAuthSession();
+// Google SDK 초기화
+GoogleSignin.configure({
+  webClientId: Constants.expoConfig?.extra?.googleClientId,
+  iosClientId: Constants.expoConfig?.extra?.googleIosClientId, // iOS용 클라이언트 ID 추가
+  offlineAccess: true,
+});
 
-// OAuth 설정
-const OAUTH_CONFIG = {
-  google: {
-    clientId: Constants.expoConfig?.extra?.googleClientId,
-    authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-    tokenEndpoint: "https://oauth2.googleapis.com/token",
-    scopes: ["openid", "profile", "email"],
-  },
-  kakao: {
-    clientId: Constants.expoConfig?.extra?.kakaoClientId,
-    authorizationEndpoint: "https://kauth.kakao.com/oauth/authorize",
-    tokenEndpoint: "https://kauth.kakao.com/oauth/token",
-    scopes: ["name", "gender", "phone_number"],
-  },
-  naver: {
-    clientId: Constants.expoConfig?.extra?.naverClientId,
-    clientSecret: Constants.expoConfig?.extra?.naverClientSecret,
-    authorizationEndpoint: "https://nid.naver.com/oauth2.0/authorize",
-    tokenEndpoint: "https://nid.naver.com/oauth2.0/token",
-    scopes: ["name", "email"],
-  },
+// Naver SDK 초기화 설정
+const naverInitials = {
+  consumerKey: Constants.expoConfig?.extra?.naverClientId,
+  consumerSecret: Constants.expoConfig?.extra?.naverClientSecret,
+  appName: "Caring",
+  serviceUrlScheme: "caringapp", // Android & iOS 통일
+  serviceUrlSchemeIOS: "caringapp", // iOS URL Scheme
+};
+
+// Naver 초기화 상태 추적
+let naverInitialized = false;
+
+// Naver SDK 초기화 함수
+const initializeNaverSDK = async () => {
+  if (naverInitialized) {
+    console.log("✅ Naver SDK already initialized");
+    return;
+  }
+  
+  try {
+    console.log("🔧 Initializing Naver SDK...");
+    console.log("🔧 Naver config:", JSON.stringify(naverInitials, null, 2));
+    
+    await NaverLogin.initialize(naverInitials);
+    naverInitialized = true;
+    
+    console.log("✅ Naver SDK initialized successfully");
+  } catch (error) {
+    console.error("❌ Naver SDK initialization failed:", error);
+    throw new Error(`Naver SDK initialization failed: ${error.message}`);
+  }
 };
 
 /**
- * Google OAuth 로그인 - Access Token 직접 발급
+ * Google OAuth 로그인 - 네이티브 SDK 사용
  */
 export const loginWithGoogle = async () => {
-  const config = OAUTH_CONFIG.google;
-
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "caringapp",
-    path: "oauth",
-  });
-
-  console.log("\n=== Google OAuth ===");
-  console.log("Redirect URI:", redirectUri);
-
-  // Authorization Code 요청
-  const authUrl = `${config.authorizationEndpoint}?${new URLSearchParams({
-    client_id: config.clientId,
-    redirect_uri: redirectUri,
-    response_type: "code",
-    scope: config.scopes.join(" "),
-    access_type: "offline",
-    prompt: "consent",
-  })}`;
-
   try {
-    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-    if (result.type === "success") {
-      const url = result.url;
-      const params = new URLSearchParams(url.split("?")[1]);
-      const code = params.get("code");
-
-      if (!code) {
-        throw new Error("Authorization code not found");
-      }
-
-      console.log("✅ Got authorization code");
-
-      // Authorization Code로 Access Token 교환
-      const tokenResponse = await fetch(config.tokenEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          code: code,
-          client_id: config.clientId,
-          redirect_uri: redirectUri,
-          grant_type: "authorization_code",
-        }),
-      });
-
-      const tokenData = await tokenResponse.json();
-
-      if (!tokenResponse.ok) {
-        throw new Error(
-          tokenData.error_description || "Failed to get access token"
-        );
-      }
-
-      console.log("✅ Got access token from Google");
-
-      return {
-        accessToken: tokenData.access_token,
-        idToken: tokenData.id_token,
-        provider: "google",
-      };
-    } else if (result.type === "cancel") {
-      throw new Error("User cancelled the authentication");
-    } else {
-      throw new Error("Authentication failed");
+    console.log("\n=== Google OAuth (Native SDK) ===");
+    
+    // Google 로그인
+    console.log("📱 Calling GoogleSignin.hasPlayServices...");
+    await GoogleSignin.hasPlayServices();
+    
+    console.log("📱 Calling GoogleSignin.signIn...");
+    const userInfo = await GoogleSignin.signIn();
+    
+    console.log("✅ Google signIn successful");
+    console.log("👤 User info:", JSON.stringify(userInfo.user, null, 2));
+    
+    // Access Token 가져오기
+    console.log("📱 Calling GoogleSignin.getTokens...");
+    const tokens = await GoogleSignin.getTokens();
+    
+    console.log("✅ Google tokens received");
+    console.log("🔑 Access Token:", tokens.accessToken ? tokens.accessToken.substring(0, 20) + "..." : "MISSING");
+    console.log("🔑 ID Token:", tokens.idToken ? tokens.idToken.substring(0, 20) + "..." : "MISSING");
+    
+    if (!tokens.accessToken) {
+      throw new Error("Google access token is missing");
     }
+    
+    const result = {
+      accessToken: tokens.accessToken,
+      idToken: tokens.idToken,
+      provider: "google",
+      userInfo: userInfo.user,
+    };
+    
+    console.log("📦 Returning Google OAuth result");
+    
+    return result;
   } catch (error) {
-    console.error("Google OAuth error:", error);
+    console.error("❌ Google OAuth error:", error);
+    console.error("❌ Error message:", error.message);
+    console.error("❌ Error code:", error.code);
     throw error;
   }
 };
 
 /**
- * Kakao OAuth 로그인 - Access Token 직접 발급
+ * Kakao OAuth 로그인 - 네이티브 SDK 사용
  */
 export const loginWithKakao = async () => {
     try{
+        console.log("\n=== Kakao OAuth (Native SDK) ===");
         const result = await kakaoLogin();
-        console.log("Result : " + result);
+        console.log("✅ Kakao login successful");
         return result;
-
     } catch (error) {
         console.error("Kakao OAuth error:", error);
         throw error;
@@ -124,84 +108,74 @@ export const loginWithKakao = async () => {
 };
 
 /**
- * Naver OAuth 로그인 - Access Token 직접 발급
+ * Naver OAuth 로그인 - 네이티브 SDK 사용
  */
 export const loginWithNaver = async () => {
-  const config = OAUTH_CONFIG.naver;
-
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "caringapp",
-    path: "oauth",
-  });
-
-  console.log("\n=== Naver OAuth ===");
-  console.log("Redirect URI:", redirectUri);
-
-  const state = Math.random().toString(36).substring(7);
-
-  // Authorization Code 요청
-  const authUrl = `${config.authorizationEndpoint}?${new URLSearchParams({
-    client_id: config.clientId,
-    redirect_uri: redirectUri,
-    response_type: "code",
-    state: state,
-  })}`;
-
   try {
-    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-    if (result.type === "success") {
-      const url = result.url;
-      const params = new URLSearchParams(url.split("?")[1]);
-      const code = params.get("code");
-      const returnedState = params.get("state");
-
-      if (!code) {
-        throw new Error("Authorization code not found");
-      }
-
-      if (returnedState !== state) {
-        throw new Error("State mismatch - possible CSRF attack");
-      }
-
-      console.log("✅ Got authorization code");
-
-      // Authorization Code로 Access Token 교환
-      const tokenResponse = await fetch(config.tokenEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          client_id: config.clientId,
-          client_secret: config.clientSecret,
-          code: code,
-          state: state,
-        }),
-      });
-
-      const tokenData = await tokenResponse.json();
-
-      if (!tokenResponse.ok) {
-        throw new Error(
-          tokenData.error_description || "Failed to get access token"
-        );
-      }
-
-      console.log("✅ Got access token from Naver");
-
-      return {
-        accessToken: tokenData.access_token,
-        provider: "naver",
-      };
-    } else if (result.type === "cancel") {
-      throw new Error("User cancelled the authentication");
-    } else {
-      throw new Error("Authentication failed");
+    console.log("\n=== Naver OAuth (Native SDK) ===");
+    
+    // 1. SDK 초기화
+    await initializeNaverSDK();
+    
+    // 2. 기존 토큰 삭제 (클린 스타트)
+    try {
+      console.log("🧹 Clearing previous Naver session...");
+      await NaverLogin.logout();
+    } catch (e) {
+      console.log("ℹ️ No previous session to clear");
     }
+    
+    // 3. 타임아웃 설정 (30초)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Naver login timeout - 로그인 시간이 초과되었습니다")), 30000);
+    });
+    
+    console.log("📱 Calling NaverLogin.login...");
+    
+    // 4. Naver 로그인 (타임아웃 적용) - 파라미터 없이 호출
+    const result = await Promise.race([
+      NaverLogin.login(),
+      timeoutPromise
+    ]);
+    
+    console.log("✅ Naver login successful");
+    console.log("📦 Naver result keys:", Object.keys(result || {}));
+    
+    // 5. 결과 검증
+    if (!result) {
+      throw new Error("Naver login returned empty result");
+    }
+    
+    if (!result.successResponse && !result.accessToken) {
+      console.error("❌ Invalid result structure:", JSON.stringify(result, null, 2));
+      throw new Error("Naver access token not found in result");
+    }
+    
+    // successResponse 구조 처리
+    const accessToken = result.accessToken || result.successResponse?.accessToken;
+    const refreshToken = result.refreshToken || result.successResponse?.refreshToken;
+    
+    if (!accessToken) {
+      throw new Error("Naver access token is missing");
+    }
+    
+    console.log("🔑 Access Token:", accessToken.substring(0, 20) + "...");
+    
+    return {
+      accessToken,
+      refreshToken,
+      provider: "naver",
+    };
   } catch (error) {
-    console.error("Naver OAuth error:", error);
+    console.error("❌ Naver OAuth error:", error);
+    console.error("❌ Error message:", error.message);
+    console.error("❌ Error stack:", error.stack);
+    
+    // 사용자 취소인 경우
+    if (error.message?.includes('cancel') || error.code === 'USER_CANCEL') {
+      throw new Error("사용자가 로그인을 취소했습니다");
+    }
+    
     throw error;
   }
 };

@@ -12,7 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 import { loginOAuth2, loginUser } from "../api/auth/auth.api";
 import {
@@ -121,23 +121,30 @@ export default function Login() {
 
       // 3. 백엔드 응답 확인 - 다양한 응답 구조 대응
       const responseData = response.data.data || response.data;
-      
-      console.log("Parsed responseData:", JSON.stringify(responseData, null, 2));
+
+      console.log(
+        "Parsed responseData:",
+        JSON.stringify(responseData, null, 2)
+      );
       console.log("Has access_token?", !!responseData.access_token);
       console.log("Has refresh_token?", !!responseData.refresh_token);
 
       // 회원가입이 필요한 경우
       // - access_token만 있고 refresh_token이 없는 경우 (임시 토큰)
       // - 또는 needsRegistration 플래그가 true인 경우
-      const needsRegistration = !responseData.refresh_token && responseData.access_token;
-      
+      const needsRegistration =
+        !responseData.refresh_token && responseData.access_token;
+
       if (needsRegistration) {
         console.log("⚠️ OAuth 회원가입 필요");
-        console.log("💾 임시 토큰 저장 시작:", responseData.access_token.substring(0, 20) + "...");
+        console.log(
+          "💾 임시 토큰 저장 시작:",
+          responseData.access_token.substring(0, 20) + "..."
+        );
 
         // 임시 토큰 저장 (회원가입 시 사용)
         await saveTokens(responseData.access_token, null);
-        
+
         console.log("💾 임시 토큰 저장 완료");
 
         // Alert 대신 바로 페이지 이동 (또는 setTimeout으로 약간의 딜레이 추가)
@@ -149,7 +156,7 @@ export default function Login() {
             },
           });
         }, 100); // 100ms 딜레이로 토큰 저장 완료 보장
-        
+
         return;
       }
 

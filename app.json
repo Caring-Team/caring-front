@@ -10,19 +10,18 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.caringapp.mobile"
-    },
-    "android": {
-      "package": "com.caringapp.mobile",
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": true
+      "bundleIdentifier": "caringapp",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "43.203.41.246": {
+              "NSIncludesSubdomains": true,
+              "NSTemporaryExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
+      }
     },
     "web": {
       "output": "static",
@@ -48,6 +47,19 @@
           "kakaoAppKey": "c2ec577a6ed2f441c5644bb7dcb99323",
           "kotlinVersion": "1.9.25"
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.606487216546-ljqlqclg4lgju3qsv7gsr5uv7muqpvm7",
+          "iosClientId": "606487216546-ljqlqclg4lgju3qsv7gsr5uv7muqpvm7.apps.googleusercontent.com"
+        }
+      ],
+      [
+        "@react-native-seoul/naver-login",
+        {
+          "urlScheme": "caringapp"
+        }
       ]
     ],
     "experiments": {
@@ -59,10 +71,14 @@
       "eas": {
         "projectId": "549a41a2-3cdd-4422-8c83-75987434647b"
       },
-      "googleClientId": "606487216546-rac7ve9t2uq5vjv71rmenetedgs6end0.apps.googleusercontent.com",
+      "googleClientId": "606487216546-ljqlqclg4lgju3qsv7gsr5uv7muqpvm7.apps.googleusercontent.com",
+      "googleIosClientId": "606487216546-ljqlqclg4lgju3qsv7gsr5uv7muqpvm7.apps.googleusercontent.com",
       "kakaoClientId": "ac5dd963850063e87e99dadf3a96cb68",
       "naverClientId": "H5l2zITZ1TAaRkQXH2wu",
       "naverClientSecret": "CmdAO6jS_A"
+    },
+    "android": {
+      "package": "com.caringapp"
     }
   }
 }

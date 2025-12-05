@@ -176,6 +176,13 @@ function LabeledInput({
     : valid
     ? "#5DA7DB"
     : "#E5E7EB";
+  
+  // 비밀번호 필드는 passwordRules로 자동 제안 막기
+  const passwordProps = secureTextEntry ? {
+    textContentType: "none",
+    passwordRules: "minlength: 8; required: lower; required: upper; required: digit; required: [-!@#$%^&*];",
+  } : {};
+  
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={styles.label}>{label}</Text>
@@ -194,6 +201,10 @@ function LabeledInput({
         onChangeText={onChangeText}
         underlineColorAndroid="transparent"
         selectionColor="#5DA7DB"
+        autoCorrect={false}
+        autoCapitalize="none"
+        autoComplete="off"
+        {...passwordProps}
       />
       <Text style={styles.error}>{error || " "}</Text>
     </View>

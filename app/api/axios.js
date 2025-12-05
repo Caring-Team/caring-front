@@ -46,7 +46,6 @@ api.interceptors.request.use(
     if (data) console.log(`   Data: ${data}...`);
 
     const noAuthNeeded = [
-      "/auth/register",
       "/auth/login",
       "/auth/certification-code",
       "/auth/verify-phone",

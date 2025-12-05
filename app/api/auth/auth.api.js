@@ -83,8 +83,21 @@ export const sendOAuth2CertificationCode = (payload) => {
  *     provider는 경로 파라미터로 전달
  *     Request body: { access_token }
  * ----------------------------------------------- */
-export const loginOAuth2 = (provider, payload) => {
-  return apiClient.post(`/auth/oauth2/login/${provider}`, payload);
+export const loginOAuth2 = async (provider, payload) => {
+  console.log(`📤 [loginOAuth2] Starting request for provider: ${provider}`);
+  console.log(`📤 [loginOAuth2] Payload:`, JSON.stringify(payload, null, 2));
+  console.log(`📤 [loginOAuth2] Request URL: /auth/oauth2/login/${provider}`);
+  
+  try {
+    const response = await apiClient.post(`/auth/oauth2/login/${provider}`, payload);
+    console.log(`✅ [loginOAuth2] Response received:`, JSON.stringify(response.data, null, 2));
+    return response;
+  } catch (error) {
+    console.error(`❌ [loginOAuth2] Request failed for ${provider}:`, error);
+    console.error(`❌ [loginOAuth2] Error response:`, error.response?.data);
+    console.error(`❌ [loginOAuth2] Error status:`, error.response?.status);
+    throw error;
+  }
 };
 
 /* -----------------------------------------------
@@ -108,17 +121,12 @@ export const verifyOAuth2Phone = (payload) => {
 /* -----------------------------------------------
  * 13. 일반 회원가입 (로컬)
  *     POST /auth/register
+ *     Header: Authorization 자동 추가 (interceptor)
  * ----------------------------------------------- */
-export const registerUser = (payload, token) => {
+export const registerUser = (payload) => {
   // payload = { username, password, gender, address }
-  console.log (token);
-  return apiClient.post("/auth/register", payload, {
-    headers : {
-      Authorization: `Bearer ${token}`,
-    },
-    
-  });
-
+  // token은 interceptor가 자동으로 추가
+  return apiClient.post("/auth/register", payload);
 };
 
 /* -----------------------------------------------

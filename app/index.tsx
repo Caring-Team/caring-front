@@ -1,7 +1,17 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, LogBox, StyleSheet, View } from "react-native";
 import { getAccessToken } from "./utils/tokenHelper";
+
+// iOS 시스템 경고 무시
+LogBox.ignoreLogs([
+  'Cannot show Automatic Strong Passwords',
+  'iCloud Keychain is disabled',
+  'does not conform to UITextInput protocol',
+  'CHHapticPattern',
+  'hapticpatternlibrary.plist',
+  'RTIInputSystemClient',
+]);
 
 export default function Index() {
   const router = useRouter();
