@@ -30,8 +30,8 @@ export const updateReview = (reviewId, payload) => {
 // -----------------------------------
 // 4. 리뷰 삭제
 // -----------------------------------
-export const deleteReview = (reviewId) => {
-  return apiClient.delete(`/reviews/${reviewId}`);
+export const deleteReview = (id) => {
+  return apiClient.delete(`/members/me/reviews/${id}`);
 };
 
 // -----------------------------------

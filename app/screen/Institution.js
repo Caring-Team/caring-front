@@ -6,16 +6,16 @@ import {
   Alert,
   Dimensions,
   Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Linking,
 } from "react-native";
 
 import BottomTabBar from "../../components/BottomTabBar";
-import { startChat, getMyConsultRequests } from "../api/chat/chat.api";
+import { getMyConsultRequests, startChat } from "../api/chat/chat.api";
 import { getInstitutionDetail } from "../api/institution/profile.api";
 
 const { width } = Dimensions.get("window");
@@ -101,6 +101,10 @@ export default function Institution() {
       : reviews.slice(0, 2)
     : [];
 
+    const mainImage = 
+  institution.mainImageUrl ||
+  "https://via.placeholder.com/400x260?text=No+Image";
+
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -108,15 +112,12 @@ export default function Institution() {
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Image
-          source={{
-            uri:
-              institution.imageUrl ||
-              institution.bannerImageUrl ||
-              "https://via.placeholder.com/400x260?text=No+Image",
-          }}
-          style={styles.topImage}
-        />
+
+<Image
+  source={{ uri: mainImage }}
+  style={styles.topImage}
+/>
+
 
         <View style={styles.contentBox}>
           <Text style={styles.typeText}>{getInstitutionTypeLabel(institution.institutionType)}</Text>
@@ -221,6 +222,25 @@ export default function Institution() {
                 </View>
                 <Text style={styles.reviewContent}>{r.content}</Text>
 
+                {Array.isArray(r.images) && r.images.length > 0 && (
+  <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 12 }}>
+    {r.images.map((img, imgIdx) => (
+      <Image
+        key={imgIdx}
+        source={{ uri: img }}
+        style={{
+          width: (width - 80) / 3, 
+          height: 100,
+          borderRadius: 10,
+          marginRight: 8,
+          marginBottom: 8,
+          backgroundColor: "#E5E7EB",
+        }}
+        resizeMode="cover"
+      />
+    ))}
+  </View>
+)}
                 <View style={styles.reviewTagRow}>
                   {Array.isArray(r.tags) &&
                     r.tags.map((t, tagIdx) => (
@@ -243,7 +263,6 @@ export default function Institution() {
             </TouchableOpacity>
           )}
 
-          {/* 🔥 하단 3버튼 */}
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={styles.actionLeft}
@@ -364,7 +383,7 @@ const styles = StyleSheet.create({
   backButton: { position: "absolute", top: 60, left: 10, zIndex: 20 },
   topImage: { width: "100%", height: 260 },
 
-  contentBox: { paddingHorizontal: 20, marginTop: -20 },
+  contentBox: { paddingHorizontal: 20, marginTop: 10 },
 
   typeText: { fontSize: 16, color: "#5DA7DB" },
   nameText: { fontSize: 24, fontWeight: "700", color: "#162B40", marginTop: 3 },
@@ -389,6 +408,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginTop: 6,
     marginBottom: 6,
+
   },
 
   tagText: {

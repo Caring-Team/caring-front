@@ -127,14 +127,18 @@ export default function InstitutionResult() {
                   onPress={() => handleInstitutionPress(item.id)}
                 >
                   <Image
-                    source={{
-                      uri:
-                        item.imageUrl ||
-                        item.bannerImageUrl ||
-                        "https://via.placeholder.com/100",
-                    }}
-                    style={styles.thumb}
-                  />
+  source={{
+    uri:
+      item.mainImageUrl ||
+      item.imageUrl ||
+      item.bannerImageUrl ||
+      item.profileImageUrl ||
+      item.institutionImages?.[0]?.imageUrl ||
+      "https://via.placeholder.com/100",
+  }}
+  style={styles.thumb}
+/>
+
 
                   <View style={styles.infoArea}>
                     <Text style={styles.cardType}>

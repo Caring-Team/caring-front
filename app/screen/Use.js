@@ -1,20 +1,22 @@
-import { useAssets } from "expo-asset";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-  ActivityIndicator,
   Dimensions,
   Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
 
+// ✔ require()로 즉시 이미지 로딩 — 렌더 지연 없음
+const useImg = require("../../assets/images/logo.png");
+
+// ✔ 불변 데이터는 컴포넌트 밖 선언 → 불필요 렌더링 방지
 const STEPS = [
   {
     title: "원하는 기관 찾기",
@@ -40,29 +42,21 @@ const STEPS = [
 
 export default function Use() {
   const router = useRouter();
-  const [assets] = useAssets([require("../../assets/images/logo.png")]);
-
-  if (!assets) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#5DA7DB" />
-      </View>
-    );
-  }
-
-  const useImg = assets[0];
 
   return (
     <View style={styles.root}>
+      {/* 상단 헤더 */}
       <View style={styles.headerArea}>
         <Text style={styles.headerTitle}>어플 사용법</Text>
       </View>
 
+      {/* 메인 콘텐츠 */}
       <ScrollView
         style={styles.contentArea}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{ paddingBottom: 90 }}
       >
+        {/* 히어로 영역 */}
         <LinearGradient
           colors={["#D8ECFF", "#EAF6FF"]}
           start={{ x: 0, y: 0 }}
@@ -70,15 +64,19 @@ export default function Use() {
           style={styles.heroGradient}
         >
           <Image source={useImg} style={styles.heroImage} resizeMode="contain" />
+
           <Text style={styles.heroTitle}>처음 사용하셔도 걱정 없어요</Text>
+
           <Text style={styles.heroDesc}>
             기관 찾기부터 상담 신청, 예약, 채팅, 리뷰 확인까지
             어르신께 꼭 맞는 기관을 추천받으며 손쉽게 이용하실 수 있어요.
           </Text>
         </LinearGradient>
 
+        {/* 섹션 제목 */}
         <Text style={styles.sectionTitle}>이렇게 사용해보세요</Text>
 
+        {/* 단계 카드 */}
         <View style={{ gap: 12 }}>
           {STEPS.map((item, idx) => (
             <View key={idx} style={styles.stepCard}>
@@ -88,13 +86,16 @@ export default function Use() {
                 </View>
                 <Text style={styles.stepTitle}>{item.title}</Text>
               </View>
+
               <Text style={styles.stepDesc}>{item.desc}</Text>
             </View>
           ))}
         </View>
 
+        {/* 사용 팁 카드 */}
         <View style={styles.tipCard}>
           <Text style={styles.tipTitle}>사용 꿀팁</Text>
+
           <Text style={styles.tipDesc}>
             • 회원·어르신 정보를 등록하면 추천이 더 정확해져요.{"\n\n"}
             • 상담/예약 현황은 마이페이지에서 다시 확인할 수 있어요.{"\n\n"}
@@ -103,6 +104,7 @@ export default function Use() {
         </View>
       </ScrollView>
 
+      {/* 하단 버튼 */}
       <TouchableOpacity style={styles.bottomButton} onPress={() => router.back()}>
         <Text style={styles.bottomButtonText}>사용법 이해했어요</Text>
       </TouchableOpacity>
@@ -110,16 +112,12 @@ export default function Use() {
   );
 }
 
+// ------------------------------------
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#F7F9FC",
-  },
-
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
 
   headerArea: {

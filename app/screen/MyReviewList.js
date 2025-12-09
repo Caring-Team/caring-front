@@ -4,11 +4,12 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 import { deleteReview, getMyReviews } from "../api/review/review.api";
@@ -17,11 +18,24 @@ export default function MyReviewList() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
-  const [menuOpenId, setMenuOpenId] = useState(null); // 수정/삭제 메뉴 토글
+  const [menuOpenId, setMenuOpenId] = useState(null);
 
   useEffect(() => {
     fetchReviews();
   }, []);
+
+  useEffect(() => {
+    if (reviews.length > 0 && reviews[0].imageUrls?.length > 0) {
+      fetch(reviews[0].imageUrls[0])
+        .then((res) => {
+          console.log("🔥 fetch 상태:", res.status);
+        })
+        .catch((err) => {
+          console.log("🔥 fetch 실패:", err);
+        });
+    }
+  }, [reviews]);
+  
 
   const fetchReviews = async () => {
     try {
@@ -68,7 +82,7 @@ export default function MyReviewList() {
           onPress: async () => {
             try {
               await deleteReview(id);
-              fetchReviews(); // 목록 갱신
+              fetchReviews();
             } catch (error) {
               console.log("리뷰 삭제 실패:", error);
               Alert.alert("삭제 실패", "잠시 후 다시 시도해주세요.");
@@ -105,57 +119,76 @@ export default function MyReviewList() {
           ) : (
             <View style={{ marginTop: 10 }}>
               {reviews.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.card}
-                  activeOpacity={0.85}
-                  onPress={null}
-                >
+                <View key={item.id} style={styles.card}>
+                  
+                  {/* ▣ 카드 상단 제목 + 메뉴 */}
                   <View style={styles.cardHeader}>
                     <Text style={styles.institutionName}>{item.institutionName}</Text>
 
-                    {/* 메뉴 버튼 */}
+                    {/* 메뉴 아이콘 */}
                     <TouchableOpacity
                       onPress={() =>
                         setMenuOpenId(menuOpenId === item.id ? null : item.id)
                       }
+                      style={styles.menuIconArea}
                     >
                       <Ionicons name="ellipsis-horizontal" size={22} color="#6B7A99" />
                     </TouchableOpacity>
+
+                    {/* 메뉴 버튼 */}
+                    {menuOpenId === item.id && (
+                      <View style={styles.inlineMenu}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setMenuOpenId(null);
+                            router.push(`/screen/MyReview?id=${item.id}`);
+                          }}
+                        >
+                          <Text style={styles.menuButtonInline}>수정</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setMenuOpenId(null);
+                            handleDelete(item.id);
+                          }}
+                        >
+                          <Text style={[styles.menuButtonInline, { color: "#D9534F" }]}>
+                            삭제
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
-
-                  {/* 수정/삭제 메뉴 */}
-                  {menuOpenId === item.id && (
-                    <View style={styles.menuBox}>
-                      <TouchableOpacity
-                        style={styles.menuButton}
-                        onPress={() => {
-                          setMenuOpenId(null);
-                          router.push(`/screen/MyReview?id=${item.id}`);
-                        }}
-                      >
-                        <Text style={styles.menuText}>수정하기</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.menuButton}
-                        onPress={() => {
-                          setMenuOpenId(null);
-                          handleDelete(item.id);
-                        }}
-                      >
-                        <Text style={[styles.menuText, { color: "#D9534F" }]}>
-                          삭제하기
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
 
                   <Text style={styles.category}>{item.reservationType}</Text>
 
                   {renderStars(item.rating)}
 
                   <Text style={styles.content}>{item.content}</Text>
+
+                  {/* ▣ 이미지 리스트 */}
+                  {Array.isArray(item.imageUrls) && item.imageUrls.length > 0 && (
+                    <View style={styles.imageWrap}>
+
+                      {item.imageUrls.map((url, idx) => {
+                        
+                        // 🔥 확장자 강제 추가
+                        const fixedUrl = url.endsWith(".jpg")
+                          ? url
+                          : url + ".jpg";
+
+                        return (
+                          <Image
+                            key={idx}
+                            source={{ uri: fixedUrl }}
+                            style={styles.reviewImage}
+                            resizeMode="cover"
+                          />
+                        );
+                      })}
+                    </View>
+                  )}
 
                   <View style={styles.tagWrap}>
                     {(item.tags || []).map((tag, index) => (
@@ -164,7 +197,8 @@ export default function MyReviewList() {
                       </View>
                     ))}
                   </View>
-                </TouchableOpacity>
+
+                </View>
               ))}
             </View>
           )}
@@ -219,32 +253,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  menuBox: {
-    backgroundColor: "#FFF",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#D9DDE5",
-    marginTop: 8,
-    marginBottom: 10,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    width: 120,
-    alignSelf: "flex-end",
-  },
-
-  menuButton: { paddingVertical: 8 },
-
-  menuText: {
-    fontSize: 15,
-    color: "#162B40",
-    fontWeight: "600",
-  },
-
   institutionName: { fontSize: 18, fontWeight: "700", color: "#162B40" },
 
   category: { fontSize: 16, color: "#6B7A99", marginTop: 4 },
 
   content: { fontSize: 16, color: "#162B40", marginTop: 10 },
+
+  imageWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 14,
+  },
+
+  reviewImage: {
+    width: (360 - 80) / 3,
+    height: 100,
+    borderRadius: 10,
+    marginRight: 8,
+    marginBottom: 8,
+    backgroundColor: "#EEF1F5",
+  },
 
   tagWrap: { flexDirection: "row", marginTop: 14, flexWrap: "wrap" },
 
@@ -260,4 +288,27 @@ const styles = StyleSheet.create({
   },
 
   tagText: { fontSize: 15, color: "#162B40", fontWeight: "600" },
+
+  menuIconArea: { padding: 4 },
+
+  inlineMenu: {
+    position: "absolute",
+    right: 40,
+    top: 5,
+    flexDirection: "row",
+    gap: 12,
+    backgroundColor: "white",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DFE3EB",
+    zIndex: 20,
+  },
+
+  menuButtonInline: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#162B40",
+  },
 });
